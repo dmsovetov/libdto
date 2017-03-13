@@ -29,6 +29,7 @@ SOFTWARE.
 
 #include <string.h>
 #include <assert.h>
+#include <stdio.h>
 
 DTO_BEGIN
 
@@ -239,7 +240,7 @@ DtoTextOutput& DtoTextOutput::operator << (int32 value)
 DtoTextOutput& DtoTextOutput::operator << (int64 value)
 {
 	char buffer[21];
-	int32 length = snprintf(buffer, sizeof(buffer), "%ld", value);
+	int32 length = snprintf(buffer, sizeof(buffer), "%lld", value);
 	memcpy(advance(length), buffer, length);
 	return *this;
 }
@@ -248,7 +249,7 @@ DtoTextOutput& DtoTextOutput::operator << (int64 value)
 DtoTextOutput& DtoTextOutput::operator << (uint64 value)
 {
 	char buffer[21];
-	int32 length = snprintf(buffer, sizeof(buffer), "%lu", value);
+	int32 length = snprintf(buffer, sizeof(buffer), "%llu", value);
 	memcpy(advance(length), buffer, length);
 	return *this;
 }
