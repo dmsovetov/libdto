@@ -4,14 +4,25 @@ cmake_minimum_required(VERSION 3.2)
 # Declare the project
 project(libdto)
 
+# Declare options
+option(DTO_TESTS "Build DTO unit tests" OFF)
+
 # Library source files
 set(SRC
+	Dto.cpp
 	Bson.cpp
+	Json.cpp
+	Yaml.cpp
+	ByteBuffer.cpp
 	)
 	
 # Library header files
 set(HEADERS
+	Dto.h
 	Bson.h
+	Json.h
+	Yaml.h
+	ByteBuffer.h
 	)
 	
 # Configure IDE source file filters
@@ -21,9 +32,11 @@ source_group("Code" FILES ${SRC} ${HEADERS})
 add_library(libdto STATIC ${SRC} ${HEADERS})
 
 # Add a test executable
-add_executable(dtotest Test.cpp)
-target_link_libraries(dtotest libdto)
-source_group("Code" FILES Test.cpp)
+if (DTO_TESTS)
+	add_executable(dtotest Test.cpp)
+	target_link_libraries(dtotest libdto)
+	source_group("Code" FILES Test.cpp)
+endif ()
 
 install(TARGETS libdto DESTINATION lib)
 install(FILES Dto.h ByteBuffer.h Bson.h Json.h Yaml.h DESTINATION include/libdto)
