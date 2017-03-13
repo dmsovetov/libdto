@@ -31,8 +31,6 @@ SOFTWARE.
 
 DTO_BEGIN
 
-	class DtoKeyValueEncoder;
-
 	// A helper class to encode a DTO with C++ stream operators.
 	class DtoEncoder
 	{
@@ -45,7 +43,7 @@ DTO_BEGIN
 							DtoEncoder(byte* output, int32 capacity);
 
 							//! Constructs a DtoEncoder with an internal temporary buffer of specified capacity.
-							DtoEncoder(int32 capacity);
+							//DtoEncoder(int32 capacity);
 
 							~DtoEncoder();
 
@@ -108,7 +106,7 @@ DTO_BEGIN
 
 		DtoByteArrayOutput	m_output;		//!< An output byte array.
 		cstring				m_key;			//!< An active key value.
-		byte*				m_allocated;	//!< A temporary data buffer.
+		//byte*				m_allocated;	//!< A temporary data buffer.
 		std::stack<Nested>	m_stack;		//!< A stack of pointers to track nested DTOs.
 		char				m_index[6];		//!< A termporary buffer used for sequence item index formatting.
 	};
