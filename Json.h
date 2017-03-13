@@ -77,6 +77,44 @@ DTO_BEGIN
 		cstring						m_newLine;	//!< A new line string.
 	};
 
+    //! Parses a JSON string and produces a sequence of DTO events consumable by writer.
+    class JsonDtoReader : public DtoReader
+    {
+    public:
+
+                                    //! Constructs a JSON DTO reader instance.
+                                    JsonDtoReader(const byte* input, int32 length);
+
+        //! Parses a next event from an input stream.
+        virtual DtoEvent            next();
+
+        //! Returns a total number of consumed bytes.
+		virtual int32		        consumed() const;
+
+    private:
+
+        //! Enumeration of JSON tokens.
+        enum Token
+        {
+              TokenEOF              //!< The end of an input stream encountered.
+            , TokenString           //!< A sequence of symbols surrounded by a '"' symbol.
+            , TokenNumber           //!< An integer or a floating point number.
+            , TokenSequenceStart    //!< The start of a sequence.
+            , TokenSequenceEnd      //!< The end of a sequence.
+            , TokenKeyValueStart    //!< The start of a key-value node.
+            , TokenKeyValueEnd      //!< The end of a key-value node.
+            , TokenComma            //!< A comma separator.
+            , TokenColon            //!< A colon symbol.
+        };
+
+        //! Reads a next token from an input stream.
+        Token                       readToken(DtoStringView& text);
+
+    private:
+
+        DtoByteBufferInput          m_input;    //!< An input byte buffer.
+    };
+
 DTO_END
 
 #endif	/*	#ifndef __Dto_Json_H__	*/
