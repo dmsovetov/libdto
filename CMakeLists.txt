@@ -24,3 +24,6 @@ add_library(libdto STATIC ${SRC} ${HEADERS})
 add_executable(dtotest Test.cpp)
 target_link_libraries(dtotest libdto)
 source_group("Code" FILES Test.cpp)
+
+install(TARGETS libdto DESTINATION lib)
+install(FILES Dto.h ByteBuffer.h Bson.h Json.h Yaml.h DESTINATION include/libdto)
