@@ -63,7 +63,12 @@ int32 Dto::capacity() const
 // ** Dto::length
 int32 Dto::length() const
 {
-	return *reinterpret_cast<const int32*>(m_data);
+	if (m_data)
+	{
+		return *reinterpret_cast<const int32*>(m_data);
+	}
+
+	return 0;
 }
 
 // ** Dto::data
