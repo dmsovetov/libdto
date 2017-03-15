@@ -246,6 +246,22 @@ DTO_BEGIN
 		virtual int32		consume(const DtoEvent& event) = 0;
 	};
 
+	//! Converts DTO from one format to another.
+	template<typename TInputFormat, typename TOutputFormat>
+	void dtoConvert(const byte* input, int32 length, byte* output, int32 capacity)
+	{
+		TInputFormat reader(input, length);
+		TOutputFormat writer(output, capacity);
+
+		DtoEvent event;
+
+		do
+		{
+			event = reader.next();
+			writer.consume(event);
+		} while (event.type != DtoStreamEnd);
+	}
+
 DTO_END
 
 #include "ByteBuffer.h"
