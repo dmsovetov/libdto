@@ -42,9 +42,6 @@ DTO_BEGIN
 							//! Constructs a DtoEncoder instance.
 							DtoEncoder(byte* output, int32 capacity);
 
-							//! Constructs a DtoEncoder with an internal temporary buffer of specified capacity.
-							//DtoEncoder(int32 capacity);
-
 							~DtoEncoder();
 
 		//! Appends a boolean value to an output.

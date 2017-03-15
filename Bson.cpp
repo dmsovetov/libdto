@@ -230,7 +230,6 @@ DtoEncoder::DtoEncoder(byte* output, int32 capacity)
 DtoEncoder::~DtoEncoder()
 {
 	assert(m_stack.empty());
-//	delete[]m_allocated;
 }
 
 // ** DtoEncoder::operator <<
