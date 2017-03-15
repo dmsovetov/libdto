@@ -31,6 +31,10 @@ SOFTWARE.
 #include <assert.h>
 #include <stdio.h>
 
+#ifdef _WINDOWS
+	#define snprintf _snprintf_s
+#endif	//	#ifdef _WINDOWS
+
 DTO_BEGIN
 
 // ------------------------------------------------------- DtoByteArrayOutput ------------------------------------------------------- //
@@ -498,6 +502,19 @@ int32 DtoByteBufferInput::consumed() const
 int32 DtoByteBufferInput::available() const
 {
 	return capacity() - consumed();
+}
+
+// ** DtoByteBufferInput::ptr
+const byte* DtoByteBufferInput::ptr() const
+{
+	return m_ptr;
+}
+
+// ** DtoByteBufferInput::setPtr
+void DtoByteBufferInput::setPtr(const byte* value)
+{
+	assert(value >= m_input && value <= (m_input + m_capacity));
+	m_ptr = value;
 }
 
 DTO_END

@@ -76,7 +76,8 @@ DTO_BEGIN
 	//! Enumeration of events emitted by a reader and consumable by a writer.
 	enum DtoEventType
 	{
-		  DtoStreamStart	//!< This event is emitted at the very beginning of a DTO parsing process. 
+		  DtoError			//!< This event is emitted when an error was occured while reading a DTO.
+		, DtoStreamStart	//!< This event is emitted at the very beginning of a DTO parsing process. 
 		, DtoStreamEnd		//!< This event is emitted at the end of a DTO parsing process.
 		, DtoKeyValueStart	//!< This event is emitted when a key-value data block encountered.
 		, DtoKeyValueEnd	//!< This event is emitted when a key-value data block was fully parsed. 
@@ -200,6 +201,22 @@ DTO_BEGIN
 		DtoEventType		type;		//!< An event type.
 		DtoStringView		key;		//!< A key value associated with this event (may be null);
 		DtoValue			data;		//!< An associated event data.
+
+							//! Constructs a DtoEvent instance of specified type.
+							DtoEvent(DtoEventType type)
+								: type(type) {}
+
+							//! Constructs a DtoEvent instance of specified type with associated key value.
+							DtoEvent(DtoEventType type, const DtoStringView& key)
+								: type(type), key(key) {}
+
+							//! Constructs a DtoEvent instance from a value.
+							DtoEvent(const DtoStringView& key, const DtoValue& value)
+								: type(DtoEntry), key(key), data(value) {}
+
+							//! Constructs a DtoEvent instance.
+							DtoEvent()
+								: type(DtoError) {}
 	};
 
 	//! An abstract DTO reader interface.

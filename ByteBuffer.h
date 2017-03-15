@@ -222,10 +222,14 @@ DTO_BEGIN
 		//! Returns a total number of bytes consumed by a reader.
 		int32					consumed() const;
 
-	private:
-
 		//! Returns a readable pointer and advances a read head position by a specified number of bytes.
 		const byte*				advance(int32 count);
+
+		//! Returns current read pointer.
+		const byte*				ptr() const;
+
+		//! Sets a current read pointer.
+		void					setPtr(const byte* value);
 
 	private:
 
