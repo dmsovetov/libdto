@@ -106,7 +106,6 @@ DTO_BEGIN
 
 		DtoByteArrayOutput	m_output;		//!< An output byte array.
 		cstring				m_key;			//!< An active key value.
-		//byte*				m_allocated;	//!< A temporary data buffer.
 		std::stack<Nested>	m_stack;		//!< A stack of pointers to track nested DTOs.
 		char				m_index[6];		//!< A termporary buffer used for sequence item index formatting.
 	};

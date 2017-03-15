@@ -218,7 +218,6 @@ DtoValue constructValue(uint64 value)
 DtoEncoder::DtoEncoder(byte* output, int32 capacity)
 	: m_output(output, capacity)
 	, m_key(0)
-	//, m_allocated(0)
 {
 	// Save a document root pointer
 	m_stack.push(Nested(m_output.ptr()));
@@ -226,21 +225,6 @@ DtoEncoder::DtoEncoder(byte* output, int32 capacity)
 	// Initialize document length
 	m_output << static_cast<int32>(0);
 }
-
-// DtoEncoder::DtoEncoder
-//DtoEncoder::DtoEncoder(int32 capacity)
-//	: m_output(new byte[capacity], capacity)
-//	, m_key(0)
-//{
-//	// Save a document root pointer
-//	m_stack.push(Nested(m_output.ptr()));
-//
-//	// Initialize document length
-//	m_output << static_cast<int32>(0);
-//
-//	// Allocate a temporary buffer
-//	m_allocated = m_output.buffer();
-//}
 
 // ** DtoEncoder::~DtoEncoder
 DtoEncoder::~DtoEncoder()
