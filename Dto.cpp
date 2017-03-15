@@ -95,10 +95,15 @@ DtoIter Dto::iter() const
 DtoIter::DtoIter(const byte* input, int32 length)
 	: m_input(input)
 	, m_length(length)
-	, m_type(DtoEnd)
 {
 	memset(&m_key, 0, sizeof(m_key));
 	memset(&m_value, 0, sizeof(m_value));
+}
+
+// ** DtoIter::operator bool
+DtoIter::operator bool() const
+{
+	return m_value.type != DtoEnd;
 }
 
 // ** DtoIter::next
@@ -122,7 +127,7 @@ bool DtoIter::next()
 // ** DtoIter::type
 DtoValueType DtoIter::type() const
 {
-	return m_type;
+	return m_value.type;
 }
 
 // ** DtoIter::key
@@ -134,28 +139,28 @@ const DtoStringView& DtoIter::key() const
 // ** DtoIter::toBool
 bool DtoIter::toBool() const
 {
-	assert(m_type == DtoBool);
+	assert(m_value.type == DtoBool);
 	return m_value.boolean;
 }
 
 // ** DtoIter::toString
 const DtoStringView& DtoIter::toString() const
 {
-	assert(m_type == DtoString);
+	assert(m_value.type == DtoString);
 	return m_value.string;
 }
 
 // ** DtoIter::toInt32
 int32 DtoIter::toInt32() const
 {
-	assert(m_type == DtoInt32);
+	assert(m_value.type == DtoInt32);
 	return m_value.int32;
 }
 
 // ** DtoIter::toDouble
 double DtoIter::toDouble() const
 {
-	assert(m_type == DtoDouble);
+	assert(m_value.type == DtoDouble);
 	return m_value.number;
 }
 

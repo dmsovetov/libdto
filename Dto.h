@@ -124,6 +124,9 @@ DTO_BEGIN
 	friend class Dto;
 	public:
 
+								//! Returns true if this iter points to a valid item.
+								operator bool() const;
+
 		//! Switches to a next value.
 		bool					next();
 
@@ -155,7 +158,6 @@ DTO_BEGIN
 		const byte*				m_input;	//!< An input DTO data.
 		int32					m_length;	//!< An input DTO length.
 		DtoStringView			m_key;		//!< Entry key this iterator points to.
-		DtoValueType			m_type;		//!< Entry value type this iterator points to.
 		DtoValue				m_value;	//!< Entry value this iterator points to.
 	};
 
