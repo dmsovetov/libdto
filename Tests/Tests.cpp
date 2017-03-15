@@ -158,14 +158,14 @@ int main(int argc, char** argv)
 		assert(memcmp(document, copy, length) == 0);
 	}
 
+	byte json[16536];
+	memset(json, 0, sizeof(json));
 
 	// Format to a JSON string
 	{
-		byte json[16536];
-		memset(json, 0, sizeof(json));
-
 		BinaryDtoReader reader(copy, sizeof(copy));
-		JsonDtoWriter writer(json, sizeof(json));
+		BinaryDtoWriter binaryWriter(document, sizeof(document));
+		JsonDtoWriter jsonWriter(json, sizeof(json));
 		//JsonStyledDtoWriter writer(json, sizeof(json));
 		//YamlDtoWriter writer(json, sizeof(json));
 		DtoEvent event;
@@ -173,12 +173,19 @@ int main(int argc, char** argv)
 		do
 		{
 			event = reader.next();
-			writer.consume(event);
+			jsonWriter.consume(event);
 		} while (event.type != DtoStreamEnd);
+
+		/*JsonDtoReader jsonReader(json, sizeof(json));
+		do
+		{
+			event = jsonReader.next();
+			binaryWriter.consume(event);
+		} while (event.type != DtoStreamEnd);*/
 
 		printf("\n%s\n", json);
 	}
-	/*
+ 
 	cstring indent[8] =
 	{
 		  ""
@@ -193,14 +200,17 @@ int main(int argc, char** argv)
 
 	int32 level = 0;
 
-	BinaryDtoReader reader(copy, sizeof(copy));
+	JsonDtoReader jsonReader(json, sizeof(json));
 	DtoEvent event;
 	do
 	{
-		event = reader.next();
+		event = jsonReader.next();
 
 		switch (event.type)
 		{
+		case DtoError:
+			printf("parse error\n");
+			break;
 		case DtoStreamStart:
 			printf("{\n");
 			level++;
@@ -210,13 +220,13 @@ int main(int argc, char** argv)
 			level--;
 			break;
 		case DtoKeyValueStart:
-			printf("%s%s = {\n", indent[level++], event.key.value);
+			printf("%s%.*s = {\n", indent[level++], event.key.length, event.key.value);
 			break;
 		case DtoKeyValueEnd:
 			printf("%s}\n", indent[--level]);
 			break;
 		case DtoSequenceStart:
-			printf("%s%s = [\n", indent[level++], event.key.value);
+			printf("%s%.*s = [\n", indent[level++], event.key.length, event.key.value);
 			break;
 		case DtoSequenceEnd:
 			printf("%s]\n", indent[--level]);
@@ -225,27 +235,30 @@ int main(int argc, char** argv)
 			switch (event.data.type)
 			{
 			case DtoString:
-				printf("%s%s = %s\n", indent[level], event.key.value, event.data.string.value);
+				printf("%s%.*s = %.*s\n", indent[level], event.key.length, event.key.value, event.data.string.length, event.data.string.value);
 				break;
 			case DtoBinary:
-				printf("%s%s = <blob:%d>\n", indent[level], event.key.value, event.data.binary.length);
+				printf("%s%.*s = <blob:%d>\n", indent[level], event.key.length, event.key.value, event.data.binary.length);
 				break;
 			case DtoBool:
-				printf("%s%s = %s\n", indent[level], event.key.value, event.data.boolean ? "true" : "false");
+				printf("%s%.*s = %s\n", indent[level], event.key.length, event.key.value, event.data.boolean ? "true" : "false");
 				break;
 			case DtoInt32:
-				printf("%s%s = %d\n", indent[level], event.key.value, event.data.int32);
+				printf("%s%.*s = %d\n", indent[level], event.key.length, event.key.value, event.data.int32);
 				break;
 			case DtoInt64:
-				printf("%s%s = %lld\n", indent[level], event.key.value, event.data.int64);
+				printf("%s%.*s = %lld\n", indent[level], event.key.length, event.key.value, event.data.int64);
 				break;
 			case DtoTimestamp:
-				printf("%s%s = %lld\n", indent[level], event.key.value, event.data.uint64);
+				printf("%s%.*s = %lld\n", indent[level], event.key.length, event.key.value, event.data.uint64);
+				break;
+			case DtoDouble:
+				printf("%s%.*s = %g\n", indent[level], event.key.length, event.key.value, event.data.number);
 				break;
 			}
 			break;
 		}
 	} while (event.type != DtoStreamEnd);
-	*/
+
 	return 0;
 }

@@ -33,9 +33,7 @@ add_library(libdto STATIC ${SRC} ${HEADERS})
 
 # Add a test executable
 if (DTO_TESTS)
-	add_executable(dtotest Test.cpp)
-	target_link_libraries(dtotest libdto)
-	source_group("Code" FILES Test.cpp)
+	add_subdirectory(tests)
 endif ()
 
 install(TARGETS libdto DESTINATION lib)
