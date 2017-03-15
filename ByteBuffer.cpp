@@ -317,7 +317,7 @@ DtoTextOutput& DtoTextOutput::operator << (const DtoValue& value)
 		break;
 
 	case DtoString:
-		operator << (value.string.value);
+		operator << (value.string);
 		break;
 
 	case DtoInt32:
