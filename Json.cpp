@@ -56,7 +56,7 @@ int32 JsonDtoWriter::consume(const DtoEvent& event)
 
 	case DtoStreamEnd:
 		m_stack.pop();
-		removeTrailingComma() << "}";
+		removeTrailingComma() << "}" << DtoTextOutput::zero;
 		break;
 
 	case DtoSequenceStart:

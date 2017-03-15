@@ -358,6 +358,10 @@ DtoTextOutput& DtoTextOutput::operator << (marker value)
 	case quotedString:
 		m_isQuotedString = true;
 		break;
+
+	case zero:
+		*advance(1) = 0;
+		break;
 		
 	default:
 		assert(0);

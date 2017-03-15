@@ -118,7 +118,8 @@ DTO_BEGIN
 		//! A special marker type to control an output.
 		enum marker
 		{
-			quotedString	//!< Indicates that a next string value should be quoted.
+			  quotedString	//!< Indicates that a next string value should be quoted.
+			, zero			//!< Writes a zero terminator to an output string.
 		};
 
 								//! Constructs DtoTextOutput instance.
