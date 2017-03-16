@@ -24,7 +24,16 @@ SOFTWARE.
 
 **************************************************************************/
 
-#include <stdio.h>
+#include "Tests.h"
+
+int main(int argc, char *argv[])
+{
+	::testing::InitGoogleTest(&argc, argv);
+	int res = RUN_ALL_TESTS();
+	return res;
+}
+
+/*#include <stdio.h>
 #include <assert.h>
 #include "Dto.h"
 
@@ -176,12 +185,12 @@ int main(int argc, char** argv)
 			jsonWriter.consume(event);
 		} while (event.type != DtoStreamEnd);
 
-		/*JsonDtoReader jsonReader(json, sizeof(json));
-		do
-		{
-			event = jsonReader.next();
-			binaryWriter.consume(event);
-		} while (event.type != DtoStreamEnd);*/
+		//JsonDtoReader jsonReader(json, sizeof(json));
+		//do
+		//{
+		//	event = jsonReader.next();
+		//	binaryWriter.consume(event);
+		//} while (event.type != DtoStreamEnd);
 
 		printf("\n%s\n", json);
 	}
@@ -261,4 +270,4 @@ int main(int argc, char** argv)
 	} while (event.type != DtoStreamEnd);
 
 	return 0;
-}
+}*/
