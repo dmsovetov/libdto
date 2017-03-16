@@ -37,7 +37,7 @@ DTO_BEGIN
 	public:
 
 		//! A proxy type that is used byte writer to finalize DTO encoding.
-		enum marker { end, keyValue, sequence };
+		enum marker { end, keyValue, sequence, null };
 
 							//! Constructs a DtoEncoder instance.
 							DtoEncoder(byte* output, int32 capacity);
@@ -64,6 +64,12 @@ DTO_BEGIN
 
 		//! Appends a binary data to an output buffer
 		DtoEncoder&			operator << (const DtoBinaryBlob& value);
+
+		//! Appends a regular expression to an output buffer
+		DtoEncoder&			operator << (const DtoRegularExpression& value);
+
+		//! Appends a UUID to an output buffer
+		DtoEncoder&			operator << (const DtoUuid& value);
 
 		//! Appends a nested key-value node to an output buffer.
 		DtoEncoder&			operator << (const DtoEncoder& value);

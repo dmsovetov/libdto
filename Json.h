@@ -91,10 +91,10 @@ DTO_BEGIN
         //! Returns a total number of consumed bytes.
 		virtual int32		        consumed() const;
 
-    private:
+    protected:
 
         //! Enumeration of JSON tokens.
-        enum Token
+        enum
         {
 			  TokenNonTerminal		//!< A non terminal symbol encountered.
             , TokenEOF              //!< The end of an input stream encountered.
@@ -108,6 +108,11 @@ DTO_BEGIN
             , TokenColon            //!< A colon symbol.
 			, TokenTrue				//!< A boolean value token.
 			, TokenFalse			//!< A boolean value token.
+			, TokenSpace			//!< A whitespace token.
+			, TokenTab				//!< A tab token.
+			, TokenNewLine			//!< A new line token.
+			, TokenMinus			//!< A minus sign token.
+			, TotalJsonTokens		//!< A total number of JSON tokens.
         };
 
 		//! Contains info about a JSON node being parsed.
@@ -130,8 +135,35 @@ DTO_BEGIN
 										: type(type), children(0), closed(false) {}
 		};
 
-        //! Reads a next token from an input stream.
-        Token                       readToken(DtoStringView& text);
+		//! A token structure.
+		struct Token
+		{
+			DtoStringView			text;	//!< A token text.
+			byte					type;	//!< A token type.
+			int32					line;	//!< A token line number.
+			int32					column;	//!< A token column number.
+		};
+
+		//! Returns a current symbol.
+		char						currentSymbol() const;
+
+		//! Returns true if a specified symbol can be consumed, if so consumes it.
+		bool						consumeSymbol(char c);
+
+        //! Reads a next token from an input stream and returns it's type.
+        byte						readToken();
+
+		//! Reads a next non whitespace token from an input stream and returns it's type.
+		byte						readNonSpaceToken();
+
+		//! Returns current token type.
+		byte						currentToken() const;
+
+		//! Returns current token text.
+		const DtoStringView&		currentText() const;
+
+		//! Sets a current token.
+		byte						setToken(byte type, const DtoStringView& text);
 
 		//! Reads a string token from an input stream.
 		void						consumeStringToken(DtoStringView& text);
@@ -140,36 +172,37 @@ DTO_BEGIN
 		void						consumeNumberToken(DtoStringView& text);
 
 		//! Consumes a DtoEntry event from an input stream.
-		DtoEvent					eventEntry(const DtoStringView& key);
+		DtoEvent					eventEntry(DtoStringView key);
 
 		//! Consumes a next event from an input stream.
-		DtoEvent					eventRoot(Node& node, Token token, const DtoStringView& text);
+		DtoEvent					eventRoot(Node& node);
 
 		//! Consumes a next event from an input stream.
-		DtoEvent					eventKeyValue(Node& node, Token token, const DtoStringView& text);
+		DtoEvent					eventKeyValue(Node& node);
 
 		//! Consumes a next event from an input stream.
-		DtoEvent					eventSequence(Node& node, Token token, const DtoStringView& text);
+		DtoEvent					eventSequence(Node& node);
 
 		//! Returns true if an expected token was read from an input stream.
-		bool						expectToken(Token token);
+		bool						expectToken(byte token);
 
 		//! Returns true if a next token is a specified one, if so consumes it.
-		bool						parseToken(Token token);
+		bool						parseToken(byte token);
 
 		//! Constructs a string value from a token.
 		DtoValue					stringFromToken(const DtoStringView& value);
 
 		//! Constructs a number value from a token.
-		DtoValue					numberFromToken(const DtoStringView& value);
+		DtoValue					numberFromToken(const DtoStringView& value, int sign = 1);
 
 		//! Returns a topmost JSON node.
 		Node&						topmost();
 
-    private:
+    protected:
 
         DtoByteBufferInput          m_input;    //!< An input byte buffer.
 		std::stack<Node>			m_stack;	//!< A node stack.
+		Token						m_token;	//!< A current token.
 		char						m_text[64];	//!< An internal temporary string buffer.
     };
 

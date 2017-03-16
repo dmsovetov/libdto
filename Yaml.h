@@ -35,7 +35,7 @@ DTO_BEGIN
 	public:
 
 								//! Constructs a Yaml data writer.
-								YamlDtoWriter(byte* output, int32 capacity, cstring newLine = "\r\n");
+								YamlDtoWriter(byte* output, int32 capacity, cstring newLine = "\n");
 
 		//! Consumes an event an writes next entry to an output stream.
 		virtual int32			consume(const DtoEvent& event);
@@ -64,6 +64,53 @@ DTO_BEGIN
 		DtoTextOutput			m_output;	//!< An output data buffer.
 		std::stack<Nested>		m_stack;	//!< A DTO value type stack.
 		cstring					m_newLine;	//!< A new line symbol.
+	};
+
+	//! Parses a Yaml string and produces a sequence of DTO events consumable by writer.
+	class YamlDtoReader : public JsonDtoReader
+	{
+	public:
+
+									//! Constructs a Yaml DTO reader instance.
+									YamlDtoReader(const byte* input, int32 length);
+
+		//! Parses a next event from an input stream.
+		virtual DtoEvent            next();
+
+	private:
+
+		//! Reads a next token from an input stream.
+		byte						readToken();
+
+		//! Reads an identifier token from an input stream.
+		bool						consumeIdentifierToken(DtoStringView& text);
+
+		//! Reads all available whitespace characters and returns an indentation level.
+		int32						consumeIndentation();
+
+		//! Reads all available whitespace or tab characters.
+		void						consumeWhiteSpaces();
+
+		//! Consumes a next event from an input stream.
+		DtoEvent					eventRoot(Node& node);
+
+		//! Consumes a next event from an input stream.
+		DtoEvent					eventKeyValue(Node& node);
+
+		//! Consumes a next event from an input stream.
+		DtoEvent					eventSequence(Node& node);
+
+		//! Consumes a DtoEntry event from an input stream.
+		DtoEvent					eventEntry(const DtoStringView& key);
+
+	private:
+
+		//! Enumeration of Yaml tokens.
+		enum Token
+		{
+			  TokenEntry = TotalJsonTokens		//!< A sequence entry token.
+			, TokenIdentifier					//!< An identifier token (probably a key or a string value)
+		};
 	};
 
 DTO_END

@@ -29,6 +29,10 @@ SOFTWARE.
 
 #include <assert.h>
 
+#ifdef _WINDOWS
+	#define itoa _itoa_s
+#endif	//	#ifdef _WINDOWS
+
 DTO_BEGIN
 
 BinaryDtoWriter::BinaryDtoWriter(byte* output, int32 capacity)
@@ -136,6 +140,14 @@ int32 BinaryDtoWriter::encode(DtoByteArrayOutput& output, const DtoStringView& k
 
 	case DtoBinary:
 		output << value.binary.length << value.binary.subtype << DtoByteArrayOutput::size(value.binary.length) << value.binary.data;
+		break;
+
+	case DtoUUID:
+		output << DtoByteArrayOutput::size(16) << value.uuid.value;
+		break;
+
+	case DtoRegEx:
+		output << value.regex.value << DtoEnd << value.regex.options << DtoEnd;
 		break;
 
 	default:
@@ -298,6 +310,28 @@ DtoEncoder& DtoEncoder::operator << (const DtoBinaryBlob& value)
 }
 
 // ** DtoEncoder::operator <<
+DtoEncoder& DtoEncoder::operator << (const DtoRegularExpression& value)
+{
+	assert(!complete());
+	DtoValue dtoValue;
+	dtoValue.type = DtoRegEx;
+	dtoValue.regex = value;
+	BinaryDtoWriter::encode(m_output, entryKey(), dtoValue);
+	return *this;
+}
+
+// ** DtoEncoder::operator <<
+DtoEncoder& DtoEncoder::operator << (const DtoUuid& value)
+{
+	assert(!complete());
+	DtoValue dtoValue;
+	dtoValue.type = DtoUUID;
+	dtoValue.uuid = value;
+	BinaryDtoWriter::encode(m_output, entryKey(), dtoValue);
+	return *this;
+}
+
+// ** DtoEncoder::operator <<
 DtoEncoder& DtoEncoder::operator << (const DtoEncoder& value)
 {
 	assert(value.complete());
@@ -324,6 +358,10 @@ DtoEncoder& DtoEncoder::operator << (marker value)
 		m_output << static_cast<int32>(0);
 		break;
 
+	case null:
+		m_output << DtoNull << entryKey() << DtoEnd;
+		break;
+
 	case end:
 		m_output << DtoEnd;
 		*reinterpret_cast<int32*>(m_stack.top().ptr) = m_output.ptr() - m_stack.top().ptr;
@@ -342,7 +380,8 @@ DtoStringView DtoEncoder::entryKey()
 
 	if (topmost.index >= 0)
 	{
-		key = itoa(topmost.index++, m_index, 10);
+		itoa(topmost.index++, m_index, 10);
+		key = m_index;
 	}
 	else
 	{
@@ -458,7 +497,19 @@ int32 BinaryDtoReader::decode(DtoByteBufferInput& input, DtoStringView& key, Dto
 
 	case DtoSequence:
 	case DtoKeyValue:
-		input >> value.binary.length >> value.binary.data;
+		input >> value.binary.data;
+		value.binary.length = *reinterpret_cast<const int32*>(value.binary.data);
+		break;
+
+	case DtoUUID:
+		memcpy(value.uuid.value, input.advance(16), 16);
+		break;
+
+	case DtoRegEx:
+		input >> value.regex.value >> DtoByteBufferInput::skip(1) >> value.regex.options >> DtoByteBufferInput::skip(1);
+		break;
+
+	case DtoNull:
 		break;
 
 	default:
@@ -500,6 +551,7 @@ DtoEvent BinaryDtoReader::next()
 		case DtoSequence:
 		case DtoKeyValue:
 			event.type = push(event.data.type, event.data.binary.length);
+			m_input >> DtoByteBufferInput::skip(4); // Skip the document length
 			break;
 		}
 	}

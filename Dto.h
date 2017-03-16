@@ -89,16 +89,50 @@ DTO_BEGIN
 	//! A structure to store parsed string value or a key as a string pointer along with string length.
 	struct DtoStringView
 	{
-		cstring			value;		//!< A pointer to a first charecter of a string (this string is NOT zero-terminated).
-		int32			length;		//!< A total number of characters in a string.
+		cstring					value;		//!< A pointer to a first charecter of a string (this string is NOT zero-terminated).
+		int32					length;		//!< A total number of characters in a string.
+
+								//! Returns true if this is a valid string view (has a non-null pointer and non-zero length).
+								operator bool() const;
+
+		//! Compares this string view with a C string.
+		bool					operator == (cstring other) const;
+
+		//! Tests two string views for an equality.
+		bool					operator == (const DtoStringView& other) const;
+
+		//! Constructs a string view from a C string.
+		static DtoStringView	construct(cstring value);
 	};
 
 	//! A structure to store a binary blob value.
 	struct DtoBinaryBlob
 	{
-		const byte*		data;		//!< A pointer to an array of bytes that represent binary blob.
-		byte			subtype;	//!< A binary data type.
-		int32			length;		//!< A total number of bytes comprising the binary blob.
+		const byte*				data;		//!< A pointer to an array of bytes that represent binary blob.
+		byte					subtype;	//!< A binary data type.
+		int32					length;		//!< A total number of bytes comprising the binary blob.
+	};
+
+	//! A regular expression value.
+	struct DtoRegularExpression
+	{
+		DtoStringView			value;		//!< A regular expression value.
+		DtoStringView			options;	//!< A regular expression options.
+
+		//! Constructs a regular expression.
+		static DtoRegularExpression	construct(cstring value, cstring options = "");
+	};
+
+	//! A universally unique identifier value.
+	struct DtoUuid
+	{
+		byte			value[16];	//!< Actual UUID value.
+
+		//! Constructs a UUID with all zeroes.
+		static DtoUuid	null();
+
+		//! Generates a next UUID.
+		static DtoUuid	generate();
 	};
 
 	//! A structure to store value associated with DTO key.
@@ -108,13 +142,15 @@ DTO_BEGIN
 
 		union
 		{
-			bool			boolean;
-			double			number;
-			DtoStringView	string;
-			int32			int32;
-			int64			int64;
-			uint64			uint64;
-			DtoBinaryBlob	binary;
+			bool					boolean;
+			double					number;
+			DtoStringView			string;
+			int32					int32;
+			int64					int64;
+			uint64					uint64;
+			DtoBinaryBlob			binary;
+			DtoRegularExpression	regex;
+			DtoUuid					uuid;
 		};
 	};
 
@@ -126,6 +162,12 @@ DTO_BEGIN
 
 								//! Returns true if this iter points to a valid item.
 								operator bool() const;
+
+		//! Returns true if a entry value type this iter points to matches a specified one.
+		bool					operator == (DtoValueType type) const;
+
+		//! Returns true if a entry value type this iter points does not match a specified one.
+		bool					operator != (DtoValueType type) const;
 
 		//! Switches to a next value.
 		bool					next();
@@ -147,6 +189,9 @@ DTO_BEGIN
 
 		//! Returns double iterator value.
 		double					toDouble() const;
+
+		//! Returns a DTO this iterator points to.
+		Dto						toDto() const;
 
 	private:
 
@@ -170,7 +215,7 @@ DTO_BEGIN
 								Dto();
 
 								//! Constructs a DTO instance from an array of bytes.
-								Dto(byte* data, int32 capacity);
+								Dto(const byte* data, int32 capacity);
 
 								//! Returns true if this DTO instance is valid (has a non-zero length and valid data pointer).
 								operator bool() const;
@@ -183,14 +228,25 @@ DTO_BEGIN
 
 		//! Returns a DTO data buffer.
 		const byte*				data() const;
-		byte*					data();
 
 		//! Returns a DTO iterator instance.
 		DtoIter					iter() const;
 
+		//! Searches for an entry with specified key.
+		DtoIter					find(cstring key) const;
+
+		//! Searches for an entry with specified key.
+		DtoIter					find(const DtoStringView& key) const;
+
+		//! Searches for an entry with specified key, including nested objects.
+		DtoIter					findDescendant(cstring key) const;
+
+		//! Returns a total number of entries inside this DTO.
+		int32					entryCount() const;
+
 	private:
 
-		byte*					m_data;		//!< An array of bytes with encoded data.
+		const byte*				m_data;		//!< An array of bytes with encoded data.
 		int32					m_capacity;	//!< Data buffer capacity.
 	};
 
@@ -219,6 +275,9 @@ DTO_BEGIN
 							//! Constructs a DtoEvent instance.
 							DtoEvent()
 								: type(DtoError) {}
+
+		//! Returns true if an event type matches the specified one.
+		bool				operator == (DtoEventType type) const { return this->type == type; }
 	};
 
 	//! An abstract DTO reader interface.
@@ -248,7 +307,7 @@ DTO_BEGIN
 
 	//! Converts DTO from one format to another.
 	template<typename TInputFormat, typename TOutputFormat>
-	void dtoConvert(const byte* input, int32 length, byte* output, int32 capacity)
+	bool dtoConvert(const byte* input, int32 length, byte* output, int32 capacity)
 	{
 		TInputFormat reader(input, length);
 		TOutputFormat writer(output, capacity);
@@ -258,8 +317,38 @@ DTO_BEGIN
 		do
 		{
 			event = reader.next();
+
+			if (event == DtoError)
+			{
+				return false;
+			}
+
 			writer.consume(event);
 		} while (event.type != DtoStreamEnd);
+
+		return true;
+	}
+
+	//! Parses a DTO object from a text format.
+	template<typename TInputFormat>
+	Dto dtoParse(cstring input, byte* output, int32 capacity)
+	{
+		bool result = dtoConvert<TInputFormat, BinaryDtoWriter>(reinterpret_cast<const byte*>(input), strlen(input), output, capacity);
+
+		if (result == false)
+		{
+			return Dto();
+		}
+
+		return Dto(output, capacity);
+	}
+
+	//! Parses a DTO object from a text format.
+	template<typename TInputFormat>
+	Dto dtoParse(byte* input, byte* output, int32 capacity)
+	{
+		Dto result = dtoParse<TInputFormat>(reinterpret_cast<cstring>(input), output, capacity);
+		return result;
 	}
 
 DTO_END

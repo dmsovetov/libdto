@@ -192,31 +192,30 @@ DtoEvent JsonDtoReader::next()
 	}
 
 	// Read next token from an input stream
-	DtoStringView text;
-	Token token = readToken(text);
+	byte token = readNonSpaceToken();
 
 	// Process next token according to a topmost node type.
 	switch (topmost().type)
 	{
 	case Node::Root:
-		return eventRoot(topmost(), token, text);
+		return eventRoot(topmost());
 
 	case Node::KeyValue:
-		return eventKeyValue(topmost(), token, text);
+		return eventKeyValue(topmost());
 
 	case Node::Sequence:
-		return eventSequence(topmost(), token, text);
+		return eventSequence(topmost());
 	}
 
 	return DtoError;
 }
 
 // ** JsonDtoReader::eventRoot
-DtoEvent JsonDtoReader::eventRoot(Node& node, Token token, const DtoStringView& text)
+DtoEvent JsonDtoReader::eventRoot(Node& node)
 {
 	DtoEvent event = DtoError;
 
-	switch (token)
+	switch (currentToken())
 	{
 	case TokenKeyValueStart:
 		return DtoStreamStart;
@@ -225,7 +224,7 @@ DtoEvent JsonDtoReader::eventRoot(Node& node, Token token, const DtoStringView& 
 		return DtoStreamEnd;
 
 	case TokenString:
-		event = eventEntry(text);
+		event = eventEntry(currentText());
 		node.children++;
 		break;
 
@@ -240,14 +239,14 @@ DtoEvent JsonDtoReader::eventRoot(Node& node, Token token, const DtoStringView& 
 }
 
 // ** JsonDtoReader::eventKeyValue
-DtoEvent JsonDtoReader::eventKeyValue(Node& node, Token token, const DtoStringView& text)
+DtoEvent JsonDtoReader::eventKeyValue(Node& node)
 {
 	DtoEvent event = DtoError;
 
-	switch (token)
+	switch (currentToken())
 	{
 	case TokenString:
-		event = eventEntry(text);
+		event = eventEntry(currentText());
 		node.children++;
 		break;
 
@@ -267,23 +266,31 @@ DtoEvent JsonDtoReader::eventKeyValue(Node& node, Token token, const DtoStringVi
 }
 
 // ** JsonDtoReader::eventSequence
-DtoEvent JsonDtoReader::eventSequence(Node& node, Token token, const DtoStringView& text)
+DtoEvent JsonDtoReader::eventSequence(Node& node)
 {
 	DtoEvent event = DtoError;
 	DtoStringView key;
 	key.value = m_text;
 	key.length = sprintf_s(m_text, "%d", node.children);
 
-	switch (token)
+	switch (currentToken())
 	{
 	case TokenString:
-		event = DtoEvent(key, stringFromToken(text));
+		event = DtoEvent(key, stringFromToken(currentText()));
 		node.children++;
 		break;
 
 	case TokenNumber:
-		event = DtoEvent(key, numberFromToken(text));
+		event = DtoEvent(key, numberFromToken(currentText()));
 		node.children++;
+		break;
+
+	case TokenMinus:
+		if (parseToken(TokenNumber))
+		{
+			event = DtoEvent(key, numberFromToken(currentText(), -1));
+			node.children++;
+		}
 		break;
 
 	case TokenSequenceStart:
@@ -317,16 +324,15 @@ DtoEvent JsonDtoReader::eventSequence(Node& node, Token token, const DtoStringVi
 }
 
 // ** JsonDtoReader::eventEntry
-DtoEvent JsonDtoReader::eventEntry(const DtoStringView& key)
+DtoEvent JsonDtoReader::eventEntry(DtoStringView key)
 {
 	if (!expectToken(TokenColon))
 	{
 		return DtoError;
 	}
 
-	DtoStringView text;
 	DtoValue value;
-	Token token = readToken(text);
+	byte token = readNonSpaceToken();
 
 	switch (token)
 	{
@@ -339,10 +345,17 @@ DtoEvent JsonDtoReader::eventEntry(const DtoStringView& key)
 		return DtoEvent(DtoKeyValueStart, key);
 
 	case TokenString:
-		return DtoEvent(key, stringFromToken(text));
+		return DtoEvent(key, stringFromToken(m_token.text));
 
 	case TokenNumber:
-		return DtoEvent(key, numberFromToken(text));
+		return DtoEvent(key, numberFromToken(m_token.text));
+
+	case TokenMinus:
+		if (parseToken(TokenNumber))
+		{
+			return DtoEvent(key, numberFromToken(m_token.text, -1));
+		}
+		break;
 
 	case TokenTrue:
 		value.type = DtoBool;
@@ -368,14 +381,14 @@ DtoValue JsonDtoReader::stringFromToken(const DtoStringView& value)
 }
 
 // ** JsonDtoReader::numberFromToken
-DtoValue JsonDtoReader::numberFromToken(const DtoStringView& value)
+DtoValue JsonDtoReader::numberFromToken(const DtoStringView& value, int sign)
 {
 	char buffer[24];
-	strncpy(buffer, value.value, std::min<int32>(sizeof(buffer), value.length));
+	strncpy_s(buffer, value.value, std::min<int32>(sizeof(buffer), value.length));
 
 	DtoValue result;
 	result.type = DtoDouble;
-	result.number = atof(buffer);
+	result.number = atof(buffer) * sign;
 	return result;
 }
 
@@ -392,9 +405,37 @@ JsonDtoReader::Node& JsonDtoReader::topmost()
 	return m_stack.top();
 }
 
-// ** JsonDtoReader::readToken
-JsonDtoReader::Token JsonDtoReader::readToken(DtoStringView& text)
+// ** JsonDtoReader::setToken
+byte JsonDtoReader::setToken(byte type, const DtoStringView& text)
 {
+	m_token.text = text;
+	m_token.type = type;
+	m_token.line = 0;
+	m_token.column = 0;
+	return type;
+}
+
+// ** JsonDtoReader::currentToken
+byte JsonDtoReader::currentToken() const
+{
+	return m_token.type;
+}
+
+// ** JsonDtoReader::currentText
+const DtoStringView& JsonDtoReader::currentText() const
+{
+	return m_token.text;
+}
+
+// ** JsonDtoReader::readToken
+byte JsonDtoReader::readToken()
+{
+	if (currentSymbol() == 0)
+	{
+		return TokenEOF;
+	}
+
+	DtoStringView text;
 	text.value = reinterpret_cast<cstring>(m_input.advance(1));
 	text.length = 1;
 
@@ -402,32 +443,48 @@ JsonDtoReader::Token JsonDtoReader::readToken(DtoStringView& text)
 
 	switch (symbol)
 	{
-		case 0:
-			return TokenEOF;
-
 		case '{':
-			return TokenKeyValueStart;
+			return setToken(TokenKeyValueStart, text);
 
 		case '}':
-			return TokenKeyValueEnd;
+			return setToken(TokenKeyValueEnd, text);
 
 		case '[':
-			return TokenSequenceStart;
+			return setToken(TokenSequenceStart, text);
 
 		case ']':
-			return TokenSequenceEnd;
+			return setToken(TokenSequenceEnd, text);
 
 		case ':':
-			return TokenColon;
+			return setToken(TokenColon, text);
 
 		case ',':
-			return TokenComma;
+			return setToken(TokenComma, text);
+
+		case ' ':
+			return setToken(TokenSpace, text);
+
+		case '\t':
+			return setToken(TokenTab, text);
+
+		case '\n':
+			return setToken(TokenNewLine, text);
+
+		case '-':
+			return setToken(TokenMinus, text);
+
+		case '\r':
+			if (consumeSymbol('\n'))
+			{
+				return setToken(TokenNewLine, text);
+			}
+			break;
 
 		case 't':
 			if (strncmp(reinterpret_cast<cstring>(m_input.ptr()), "rue", 3) == 0)
 			{
 				m_input.advance(3);
-				return TokenTrue;
+				return setToken(TokenTrue, text);
 			}
 			break;
 
@@ -435,7 +492,7 @@ JsonDtoReader::Token JsonDtoReader::readToken(DtoStringView& text)
 			if (strncmp(reinterpret_cast<cstring>(m_input.ptr()), "alse", 4) == 0)
 			{
 				m_input.advance(4);
-				return TokenFalse;
+				return setToken(TokenFalse, text);
 			}
 			break;
 
@@ -444,7 +501,7 @@ JsonDtoReader::Token JsonDtoReader::readToken(DtoStringView& text)
 			text.length = reinterpret_cast<cstring>(m_input.ptr()) - text.value;
 			text.value++;
 			text.length -= 2;
-			return TokenString;
+			return setToken(TokenString, text);
 
 		case '0':
 		case '1':
@@ -458,18 +515,32 @@ JsonDtoReader::Token JsonDtoReader::readToken(DtoStringView& text)
 		case '9':
 			consumeNumberToken(text);
 			text.length = reinterpret_cast<cstring>(m_input.ptr()) - text.value;
-			return TokenNumber;
+			return setToken(TokenNumber, text);
 	}
 
-	return TokenNonTerminal;
+	// Unknown token, so we have to roll back the read head
+	m_input.setPtr(m_input.ptr() - 1);
+
+	return setToken(TokenNonTerminal, text);
+}
+
+// ** JsonDtoReader::readNonSpaceToken
+byte JsonDtoReader::readNonSpaceToken()
+{
+	byte token = readToken();
+
+	while (token == TokenNewLine || token == TokenSpace || token == TokenTab)
+	{
+		token = readToken();
+	}
+
+	return token;
 }
 
 // ** JsonDtoReader::expectToken
-bool JsonDtoReader::expectToken(Token token)
+bool JsonDtoReader::expectToken(byte token)
 {
-	DtoStringView text;
-	
-	if (readToken(text) == token)
+	if (readNonSpaceToken() == token)
 	{
 		return true;
 	}
@@ -478,11 +549,10 @@ bool JsonDtoReader::expectToken(Token token)
 }
 
 // ** JsonDtoReader::parseToken
-bool JsonDtoReader::parseToken(Token token)
+bool JsonDtoReader::parseToken(byte token)
 {
 	const byte* ptr = m_input.ptr();
-	DtoStringView text;
-	Token next = readToken(text);
+	byte next = readNonSpaceToken();
 
 	if (next == token)
 	{
@@ -504,20 +574,38 @@ void JsonDtoReader::consumeStringToken(DtoStringView& text)
 // ** JsonDtoReader::consumeNumberToken
 void JsonDtoReader::consumeNumberToken(DtoStringView& text)
 {
-	while (isdigit(m_input.ptr()[0]))
+	while (isdigit(currentSymbol()))
 	{
 		m_input.advance(1);
 	}
 
-	if (m_input.ptr()[0] == '.')
+	if (currentSymbol() == '.')
 	{
 		m_input.advance(1);
 
-		while (isdigit(m_input.ptr()[0]))
+		while (isdigit(currentSymbol()))
 		{
 			m_input.advance(1);
 		}
 	}
+}
+
+// ** JsonDtoReader::currentSymbol
+char JsonDtoReader::currentSymbol() const
+{
+	return m_input.ptr()[0];
+}
+
+// ** JsonDtoReader::consumeSymbol
+bool JsonDtoReader::consumeSymbol(char c)
+{
+	if (currentSymbol() == c)
+	{
+		m_input.advance(1);
+		return true;
+	}
+
+	return false;
 }
 
 DTO_END

@@ -40,7 +40,7 @@ Dto::Dto()
 }
 
 // ** Dto::Dto
-Dto::Dto(byte* data, int32 capacity)
+Dto::Dto(const byte* data, int32 capacity)
 	: m_data(data)
 	, m_capacity(capacity)
 {
@@ -77,16 +77,94 @@ const byte* Dto::data() const
 	return m_data;
 }
 
-// ** Dto::data
-byte* Dto::data()
-{
-	return m_data;
-}
-
 // ** Dto::iter
 DtoIter Dto::iter() const
 {
 	return DtoIter(m_data + sizeof(int32), m_capacity);
+}
+
+// ** Dto::find
+DtoIter Dto::find(cstring key) const
+{
+	assert(key);
+	DtoStringView view;
+	view.value = key;
+	view.length = static_cast<int32>(strlen(key));
+	
+	return find(view);
+}
+
+// ** Dto::find
+DtoIter Dto::find(const DtoStringView& key) const
+{
+	assert(key);
+
+	DtoIter i = iter();
+
+	while (i.next())
+	{
+		if (i.key() == key)
+		{
+			return i;
+		}
+	}
+
+	return i;
+}
+
+// ** Dto::findDescendant
+DtoIter Dto::findDescendant(cstring key) const
+{
+	DtoIter i = iter();
+	Dto dto = *this;
+	
+	while (*key)
+	{
+		if (*key == '.')
+		{
+			key++;
+			continue;
+		}
+
+		DtoStringView nextKey;
+		nextKey.value = key;
+
+		while (*key && *key != '.')
+		{
+			key++;
+		}
+		nextKey.length = key - nextKey.value;
+
+		i = dto.find(nextKey);
+
+		if (i && *key == 0)
+		{
+			return i;
+		}
+
+		if (!i || (i != DtoSequence && i != DtoKeyValue))
+		{
+			return DtoIter(NULL, 0);
+		}
+
+		dto = i.toDto();
+	}
+
+	return i;
+}
+
+// ** Dto::entryCount
+int32 Dto::entryCount() const
+{
+	DtoIter i = iter();
+	int32 count = 0;
+
+	while (i.next())
+	{
+		count++;
+	}
+
+	return count;
 }
 
 // ---------------------------------------------------- DtoIter ---------------------------------------------------- //
@@ -106,6 +184,18 @@ DtoIter::operator bool() const
 	return m_value.type != DtoEnd;
 }
 
+// ** DtoIter::operator ==
+bool DtoIter::operator == (DtoValueType type) const
+{
+	return m_value.type == type;
+}
+
+// ** DtoIter::operator !=
+bool DtoIter::operator != (DtoValueType type) const
+{
+	return m_value.type != type;
+}
+
 // ** DtoIter::next
 bool DtoIter::next()
 {
@@ -116,7 +206,7 @@ bool DtoIter::next()
 	// Skip a nested DTO body
 	if (m_value.type == DtoKeyValue || m_value.type == DtoSequence)
 	{
-		m_input += m_value.binary.length - sizeof(int32);
+		m_input += m_value.binary.length;
 	}
 
 	bool isValid = m_value.type != DtoEnd;
@@ -153,6 +243,14 @@ const DtoStringView& DtoIter::toString() const
 // ** DtoIter::toInt32
 int32 DtoIter::toInt32() const
 {
+	switch (m_value.type)
+	{
+	case DtoInt32:
+		return m_value.int32;
+	case DtoDouble:
+		return static_cast<int32>(m_value.number);
+	}
+
 	assert(m_value.type == DtoInt32);
 	return m_value.int32;
 }
@@ -162,6 +260,81 @@ double DtoIter::toDouble() const
 {
 	assert(m_value.type == DtoDouble);
 	return m_value.number;
+}
+
+// ** DtoIter::toDto
+Dto DtoIter::toDto() const
+{
+	assert(m_value.type == DtoSequence || m_value.type == DtoKeyValue);
+	return Dto(m_value.binary.data, m_value.binary.length);
+}
+
+// ---------------------------------------------------- DtoStringView ---------------------------------------------------- //
+
+// ** DtoStringView::operator bool
+DtoStringView::operator bool() const
+{
+	return value != 0 && length > 0;
+}
+
+// ** DtoStringView::operator ==
+bool DtoStringView::operator == (cstring other) const
+{
+	return strncmp(value, other, length) == 0;
+}
+
+// ** DtoStringView::operator ==
+bool DtoStringView::operator == (const DtoStringView& other) const
+{
+	if (length != other.length)
+	{
+		return false;
+	}
+
+	bool equal = strncmp(value, other.value, length) == 0;
+	return equal;
+}
+
+// ** DtoStringView::construct
+DtoStringView DtoStringView::construct(cstring value)
+{
+	assert(value);
+	DtoStringView result;
+	result.value = value;
+	result.length = static_cast<int32>(strlen(value));
+	return result;
+}
+
+// ------------------------------------------------ DtoRegularExpression ------------------------------------------------ //
+
+// ** DtoRegularExpression::construct
+DtoRegularExpression DtoRegularExpression::construct(cstring value, cstring options)
+{
+	assert(value);
+	assert(options);
+
+	DtoRegularExpression regex;
+	regex.value = DtoStringView::construct(value);
+	regex.options = DtoStringView::construct(options);
+
+	return regex;
+}
+
+// -------------------------------------------------------- DtoUuid ------------------------------------------------------ //
+
+// ** DtoUuid::null
+DtoUuid DtoUuid::null()
+{
+	DtoUuid result;
+	memset(&result, 0, sizeof(result));
+	return result;
+}
+
+// ** DtoUuid::null
+DtoUuid DtoUuid::generate()
+{
+	assert(0);
+	return DtoUuid();
 }
 
 DTO_END
