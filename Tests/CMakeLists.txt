@@ -7,21 +7,25 @@ add_subdirectory(googletest)
 # Add tests executable
 add_executable(dtotests
 	Tests.cpp
-	Dto.cpp
-	Encoder.cpp
-	Iter.cpp
-	Formats.cpp
-	Json.cpp
+	DtoTests.cpp
+	EncoderTests.cpp
+	IterTests.cpp
+	BsonTests.cpp
+	JsonTests.cpp
+    YamlTests.cpp
+    YamlJsonTests.cpp
 	)
 	
 # Add a source group
 source_group("Code" FILES
 	Tests.cpp
-	Dto.cpp
-	Encoder.cpp
-	Iter.cpp
-	Formats.cpp
-	Json.cpp
+	DtoTests.cpp
+	EncoderTests.cpp
+	IterTests.cpp
+	BsonTests.cpp
+	JsonTests.cpp
+    YamlTests.cpp
+    YamlJsonTests.cpp
 	)
 
 # Add include directories

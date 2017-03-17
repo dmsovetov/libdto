@@ -29,32 +29,32 @@ SOFTWARE.
 static byte document[16536];
 typedef ::Dto::Dto DtoType;
 
-TEST(Json, ParsesEmptyObject)
+TEST(Yaml, ParsesJsonEmptyObject)
 {
-	cstring json = "{}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.length(), 5);
 	EXPECT_EQ(dto.entryCount(), 0);
 }
 
-TEST(Json, ParsesTrue)
+TEST(Yaml, ParsesJsonTrue)
 {
-	cstring json = "{\"a\":true}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":true}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
-	
+
 	DtoIter i = dto.find("a");
 	ASSERT_TRUE(i);
 
 	EXPECT_TRUE(i.toBool());
 }
 
-TEST(Json, ParsesFalse)
+TEST(Yaml, ParsesJsonFalse)
 {
-	cstring json = "{\"a\":false}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":false}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -64,10 +64,10 @@ TEST(Json, ParsesFalse)
 	EXPECT_FALSE(i.toBool());
 }
 
-TEST(Json, ParsesIntegers)
+TEST(Yaml, ParsesJsonIntegers)
 {
-	cstring json = "{\"a\":123}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":123}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -77,10 +77,10 @@ TEST(Json, ParsesIntegers)
 	EXPECT_EQ(i.toInt32(), 123);
 }
 
-TEST(Json, ParsesNegativeIntegers)
+TEST(Yaml, ParsesJsonNegativeIntegers)
 {
-	cstring json = "{\"a\":-123}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":-123}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -90,10 +90,10 @@ TEST(Json, ParsesNegativeIntegers)
 	EXPECT_EQ(i.toInt32(), -123);
 }
 
-TEST(Json, ParsesNegativeIntegersInsideArrays)
+TEST(Yaml, ParsesJsonNegativeIntegersInsideArrays)
 {
-	cstring json = "{\"a\":[-123, -1, -2]}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":[-123, -1, -2]}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -101,10 +101,10 @@ TEST(Json, ParsesNegativeIntegersInsideArrays)
 	ASSERT_TRUE(i);
 }
 
-TEST(Json, ParsesDecimals)
+TEST(Yaml, ParsesJsonDecimals)
 {
-	cstring json = "{\"a\":12.23}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":12.23}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -114,10 +114,10 @@ TEST(Json, ParsesDecimals)
 	EXPECT_EQ(i.toDouble(), 12.23);
 }
 
-TEST(Json, ParsesNegativeDecimals)
+TEST(Yaml, ParsesJsonNegativeDecimals)
 {
-	cstring json = "{\"a\":-12.23}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":-12.23}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -127,10 +127,10 @@ TEST(Json, ParsesNegativeDecimals)
 	EXPECT_EQ(i.toDouble(), -12.23);
 }
 
-TEST(Json, ParsesNegativeDecimalsInsideArrays)
+TEST(Yaml, ParsesJsonNegativeDecimalsInsideArrays)
 {
-	cstring json = "{\"a\":[-12.23, -1.2]}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":[-12.23, -1.2]}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -138,10 +138,10 @@ TEST(Json, ParsesNegativeDecimalsInsideArrays)
 	ASSERT_TRUE(i);
 }
 
-TEST(Json, ParsesStrings)
+TEST(Yaml, ParsesJsonStrings)
 {
-	cstring json = "{\"a\":\"hello world\"}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":\"hello world\"}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -151,24 +151,24 @@ TEST(Json, ParsesStrings)
 	EXPECT_TRUE(i.toString() == "hello world");
 }
 
-TEST(Json, ParsesComplexObjects)
+TEST(Yaml, ParsesJsonComplexObjects)
 {
-	cstring json = "{\"a\":12.23,\"b\":1,\"c\":true}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":12.23,\"b\":1,\"c\":true}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 }
 
-TEST(Json, HandlesWhitespaceChars)
+TEST(Yaml, HandlesJsonWhitespaceChars)
 {
-	cstring json = "{\"a\" :   12.23,\"b\":1,\r\n\n\r\n\"c\": \ttrue}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\" :   12.23,\"b\":1,\r\n\n\r\n\"c\": \ttrue}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 }
 
-TEST(Json, ParsesNestedEmptyObjects)
+TEST(Yaml, ParsesJsonNestedEmptyObjects)
 {
-	cstring json = "{\"a\":{}}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":{}}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -177,10 +177,10 @@ TEST(Json, ParsesNestedEmptyObjects)
 	EXPECT_EQ(i.type(), DtoKeyValue);
 }
 
-TEST(Json, ParsesNestedEmptyArrays)
+TEST(Yaml, ParsesJsonNestedEmptyArrays)
 {
-	cstring json = "{\"a\":[]}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":[]}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -189,10 +189,10 @@ TEST(Json, ParsesNestedEmptyArrays)
 	EXPECT_EQ(i.type(), DtoSequence);
 }
 
-TEST(Json, ParsesNestedObjects)
+TEST(Yaml, ParsesJsonNestedObjects)
 {
-	cstring json = "{\"a\":{\"b\":0}}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":{\"b\":0}}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -201,10 +201,10 @@ TEST(Json, ParsesNestedObjects)
 	EXPECT_EQ(i.type(), DtoKeyValue);
 }
 
-TEST(Json, ParsesNestedComplexObjects)
+TEST(Yaml, ParsesJsonNestedComplexObjects)
 {
-	cstring json = "{\"a\":{\"b\":0,\"c\":1,\"d\":2}}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":{\"b\":0,\"c\":1,\"d\":2}}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 	EXPECT_EQ(dto.entryCount(), 1);
 
@@ -213,10 +213,10 @@ TEST(Json, ParsesNestedComplexObjects)
 	EXPECT_EQ(i.type(), DtoKeyValue);
 }
 
-TEST(Json, ParsesNestedComplexArrays)
+TEST(Yaml, ParsesJsonNestedComplexArrays)
 {
-	cstring json = "{\"a\":[0,1,2,3]}";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "{\"a\":[0,1,2,3]}";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_TRUE(dto);
 
 	DtoIter i = dto.find("a");
@@ -224,9 +224,9 @@ TEST(Json, ParsesNestedComplexArrays)
 	EXPECT_EQ(i.type(), DtoSequence);
 }
 
-TEST(Json, WontParseRootArray)
+TEST(Yaml, WontParseJsonRootArray)
 {
-	cstring json = "[]";
-	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
+	cstring yaml = "[]";
+	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_FALSE(dto);
 }
