@@ -14,6 +14,7 @@ add_executable(dtotests
 	JsonTests.cpp
     YamlTests.cpp
     YamlJsonTests.cpp
+    TokenizerTests.cpp
 	)
 	
 # Add a source group
@@ -26,6 +27,7 @@ source_group("Code" FILES
 	JsonTests.cpp
     YamlTests.cpp
     YamlJsonTests.cpp
+    TokenizerTests.cpp
 	)
 
 # Add include directories

@@ -232,11 +232,95 @@ DTO_BEGIN
 		//! Sets a current read pointer.
 		void					setPtr(const byte* value);
 
-	private:
+	protected:
 
 		const byte*				m_input;	//!< A pointer to the beginning of an input stream.
 		const byte*				m_ptr;		//!< A readable input stream position.
 		int32					m_capacity;	//!< A maximum number of bytes that can be read from this byte array.
+	};
+
+	/*!
+	 This class implements an input stream in which the data is treated as a sequence of tokens.
+	 */
+	class DtoTokenInput : private DtoByteBufferInput
+	{
+	public:
+
+		//! Enumeration of all available tokens.
+		enum TokenType
+		{
+			  NonTerminal			//!< This special token type indicates that an unknown symbol encountered.
+			, End					//!< A zero terminator reached.
+			, NewLine				//!< A new line token is one of '\n' or '\r\n' symbols.
+			, Space					//!< An empty space character.
+			, Tab					//!< A single '\t' symbol.
+			, Identifier			//!< An identifier is a sequence of symbols surrounded by spaces, tabs or new lines.
+			, DoubleQuotedString	//!< A string token that starts with '"' symbol and ends with '"' symbol.
+			, SingleQuotedString	//!< A string token that starts with '\'' symbole and ends with '\'' symbol.
+			, Number				//!< A number token.
+			, True					//!< The 'true' keyword.
+			, False					//!< The 'false' keyword.
+			, Colon					//!< A colon symbol ':'
+			, Minus					//!< A minus symbol '-'
+			, BraceOpen				//!< An opening brace symbol '{'
+			, BraceClose			//!< A closing brace symbol '}'
+			, BracketOpen			//!< An opening bracket symbol '['
+			, BracketClose			//!< A closing bracket symbol ']'
+			, Comma					//!< A comma symbol ','
+			, TotalTokens			//!< A total number of tokens.
+		};
+
+		//! A token data that is returned by text input.
+		struct Token
+		{
+			DtoStringView		text;	//!< A token text.
+			TokenType			type;	//!< A token type.
+			int32				line;	//!< A line number this token occured.
+			int32				column;	//!< A column number of a first character of this token.
+
+			//! Returns true if this token is of specified type.
+			bool				operator == (TokenType type) const;
+		};
+
+								//! Constructs a DtoTokenInput class.
+								DtoTokenInput(const byte* input, int32 capacity);
+
+								//! Constructs a DtoTokenInput class from a C string.
+								DtoTokenInput(cstring input);
+
+		//! Reads a next token from an input stream.
+		Token					next();
+
+	private:
+
+		//! Consumes a token from an input stream and returns it's stream.
+		TokenType				consumeToken();
+
+		//! Consumes a number token from an input stream.
+		TokenType				consumeNumber();
+
+		//! Consumes a string token.
+		TokenType				consumeString(char quote, TokenType type);
+
+		//! Returns a current symbol.
+		char					currentSymbol() const;
+
+		//! Returns a next symbol in stream.
+		char					nextSymbol() const;
+
+		//! Returns a symbol that is located at specified offset.
+		char					lookAhead(int32 offset) const;
+
+		//! Returns true if a specified sequence of symbols can be consumed and if so consumes it.
+		bool					consume(cstring symbols);
+
+		//! A shortcut to consume symbol an return a token type.
+		TokenType				consumeAs(TokenType type, int32 count = 1);
+
+	private:
+
+		int32					m_line;		//!< A current line number.
+		int32					m_column;	//!< A current column number.
 	};
 
 DTO_END

@@ -30,6 +30,7 @@ SOFTWARE.
 #include <string.h>
 #include <assert.h>
 #include <stdio.h>
+#include <cctype>
 
 #ifdef _WINDOWS
 	#define snprintf _snprintf_s
@@ -519,6 +520,229 @@ void DtoByteBufferInput::setPtr(const byte* value)
 {
 	assert(value >= m_input && value <= (m_input + m_capacity));
 	m_ptr = value;
+}
+
+// ------------------------------------------------------- DtoTokenInput ------------------------------------------------------- //
+
+// ** DtoTokenInput::DtoTokenInput
+DtoTokenInput::DtoTokenInput(const byte* input, int32 capacity)
+	: DtoByteBufferInput(input, capacity)
+	, m_line(1)
+	, m_column(1)
+{
+
+}
+
+// ** DtoTokenInput::DtoTokenInput
+DtoTokenInput::DtoTokenInput(cstring input)
+	: DtoByteBufferInput(reinterpret_cast<const byte*>(input), static_cast<int32>(strlen(input) + 1))
+	, m_line(1)
+	, m_column(1)
+{
+
+}
+
+// ** DtoTokenInput::next
+DtoTokenInput::Token DtoTokenInput::next()
+{
+	Token token;
+	token.line        = m_line;
+	token.column      = m_column;
+	token.text.value  = reinterpret_cast<cstring>(m_ptr);
+	token.type        = consumeToken();
+	token.text.length = reinterpret_cast<cstring>(m_ptr) - token.text.value;
+
+	// Postprocess token
+	if (token.type == NewLine)
+	{
+		m_line++;
+		m_column = 1;
+	}
+	else
+	{
+		m_column += token.text.length;
+
+		if (token.type == DoubleQuotedString || token.type == SingleQuotedString)
+		{
+			if (token.text.length == 2)
+			{
+				token.text = DtoStringView::construct("");
+			}
+			else
+			{
+				token.text.value++;
+				token.text.length -= 2;
+			}
+		}
+	}
+	
+	return token;
+}
+
+// ** DtoTokenInput::consumeToken
+DtoTokenInput::TokenType DtoTokenInput::consumeToken()
+{
+	// First try primitive tokens
+	switch (currentSymbol())
+	{
+	case 0:
+		return End;
+	case ' ':
+		return consumeAs(Space);
+	case '\n':
+		return consumeAs(NewLine);
+	case '\t':
+		return consumeAs(Tab);
+	case '\r':
+		if (nextSymbol() == '\n')
+		{
+			return consumeAs(NewLine, 2);
+		}
+		break;
+	case '-':
+		return consumeAs(Minus);
+	case '[':
+		return consumeAs(BracketOpen);
+	case ']':
+		return consumeAs(BracketClose);
+	case '{':
+		return consumeAs(BraceOpen);
+	case '}':
+		return consumeAs(BraceClose);
+	case ':':
+		return consumeAs(Colon);
+	case ',':
+		return consumeAs(Comma);
+	case '"':
+		return consumeString('"', DoubleQuotedString);
+	case '\'':
+		return consumeString('\'', SingleQuotedString);
+	}
+
+	// Is it a number?
+	if (isdigit(currentSymbol()))
+	{
+		return consumeNumber();
+	}
+
+	// May be a boolean value?
+	if (consume("true"))
+	{
+		return True;
+	}
+	if (consume("false"))
+	{
+		return False;
+	}
+
+	// This can only be an identifier, so consume all symbols until the space, tab or new line
+	if (isalpha(currentSymbol()))
+	{
+		char c = 0;
+
+		do
+		{
+			advance(1);
+			c = currentSymbol();
+		} while (!isspace(c) && c != 0);
+
+		return Identifier;
+	}
+
+	return NonTerminal;
+}
+
+// ** DtoTokenInput::consumeNumber
+DtoTokenInput::TokenType DtoTokenInput::consumeNumber()
+{
+	// First consume an integer part
+	while (isdigit(currentSymbol()))
+	{
+		advance(1);
+	}
+
+	// Probably a decimal value
+	if (consume("."))
+	{
+		while (isdigit(currentSymbol()))
+		{
+			advance(1);
+		}
+	}
+
+	return Number;
+}
+
+// ** DtoTokenInput::consumeString
+DtoTokenInput::TokenType DtoTokenInput::consumeString(char quote, TokenType type)
+{
+	assert(currentSymbol() == quote);
+
+	// Consume an opening quote symbol
+	advance(1);
+
+	// Keep going until the next quote is reached
+	while (currentSymbol() != quote)
+	{
+		advance(1);
+	}
+
+	// Consume a trailing quote
+	advance(1);
+
+	return type;
+}
+
+// ** DtoTokenInput::currentSymbol
+char DtoTokenInput::currentSymbol() const
+{
+	return lookAhead(0);
+}
+
+// ** DtoTokenInput::currentSymbol
+char DtoTokenInput::nextSymbol() const
+{
+	return lookAhead(1);
+}
+
+// ** DtoTokenInput::currentSymbol
+char DtoTokenInput::lookAhead(int32 offset) const
+{
+	return *(m_ptr + offset);
+}
+
+// ** DtoTokenInput::consume
+bool DtoTokenInput::consume(cstring symbols)
+{
+	int32 length = static_cast<int32>(strlen(symbols));
+	int32 av     = available();
+
+	if (length > av)
+	{
+		return false;
+	}
+
+	if (strncmp(reinterpret_cast<cstring>(m_ptr), symbols, length) == 0)
+	{
+		advance(length);
+		return true;
+	}
+
+	return false;
+}
+
+// ** DtoTokenInput::consumeAs
+DtoTokenInput::TokenType DtoTokenInput::consumeAs(TokenType type, int32 count)
+{
+	assert(count >= 0);
+	advance(count);
+	return type;
+}
+
+// ** DtoTokenInput::Token::operator ==
+bool DtoTokenInput::Token::operator == (TokenType type) const
+{
+	return this->type == type;
 }
 
 DTO_END
