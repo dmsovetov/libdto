@@ -817,7 +817,7 @@ DtoTokenInput::TokenType DtoTokenInput::readToken()
 		{
 			advance(1);
 			c = currentSymbol();
-		} while (!isspace(c) && c != 0);
+		} while (isalnum(c) || c == '_');
 
 		return Identifier;
 	}

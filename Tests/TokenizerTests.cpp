@@ -180,3 +180,12 @@ TEST_F(Tokenizer, Identifiers)
 	expect(input, DtoTokenInput::Identifier, 1, 7, "world_2");
 	expect(input, DtoTokenInput::End, 1, 14);
 }
+
+TEST_F(Tokenizer, IdentifierSeparators)
+{
+	DtoTokenInput input("hello:world_2");
+	expect(input, DtoTokenInput::Identifier, 1, 1, "hello");
+	expect(input, DtoTokenInput::Colon, 1, 6);
+	expect(input, DtoTokenInput::Identifier, 1, 7, "world_2");
+	expect(input, DtoTokenInput::End, 1, 14);
+}
