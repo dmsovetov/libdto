@@ -31,12 +31,15 @@ SOFTWARE.
 #include <assert.h>
 #include <stdio.h>
 #include <cctype>
+#include <algorithm>
 
 #ifdef _WINDOWS
 	#define snprintf _snprintf_s
 #endif	//	#ifdef _WINDOWS
 
 DTO_BEGIN
+
+extern DtoErrorHandler g_errorHandler;
 
 // ------------------------------------------------------- DtoByteArrayOutput ------------------------------------------------------- //
 
@@ -524,6 +527,29 @@ void DtoByteBufferInput::setPtr(const byte* value)
 
 // ------------------------------------------------------- DtoTokenInput ------------------------------------------------------- //
 
+// ** DtoTokenInput::s_tokens
+cstring DtoTokenInput::s_tokens[TotalTokens] =
+{
+	  "nonterminal"
+	, "EOF"
+	, "new line"
+	, "space"
+	, "tab"
+	, "identifier"
+	, "double quoted string"
+	, "single quoted string"
+	, "number"
+	, "true"
+	, "false"
+	, "colon"
+	, "minus"
+	, "brace open"
+	, "brace close"
+	, "bracket open"
+	, "bracket close"
+	, "comma"
+};
+
 // ** DtoTokenInput::DtoTokenInput
 DtoTokenInput::DtoTokenInput(const byte* input, int32 capacity)
 	: DtoByteBufferInput(input, capacity)
@@ -542,45 +568,190 @@ DtoTokenInput::DtoTokenInput(cstring input)
 
 }
 
-// ** DtoTokenInput::next
-DtoTokenInput::Token DtoTokenInput::next()
+// ** DtoTokenInput::consumed
+int32 DtoTokenInput::consumed() const
 {
-	Token token;
-	token.line        = m_line;
-	token.column      = m_column;
-	token.text.value  = reinterpret_cast<cstring>(m_ptr);
-	token.type        = consumeToken();
-	token.text.length = reinterpret_cast<cstring>(m_ptr) - token.text.value;
+	return DtoByteBufferInput::consumed();
+}
+
+// ** DtoTokenInput::currentToken
+const DtoTokenInput::Token& DtoTokenInput::currentToken() const
+{
+	return m_token;
+}
+
+// ** DtoTokenInput::expect
+bool DtoTokenInput::expect(TokenType type, bool nextNonSpace)
+{
+	if (currentToken() == type)
+	{
+		if (nextNonSpace)
+		{
+			this->nextNonSpace();
+		}
+		else
+		{
+			next();
+		}
+		return true;
+	}
+
+	if (g_errorHandler)
+	{
+		char message[MaxMessageLength];
+		snprintf(message, MaxMessageLength, "error: %d:%d : expected '%s' after '%s', got '%s'", m_token.line, m_token.line, s_tokens[type], s_tokens[m_prev.type], s_tokens[m_token.type]);
+		g_errorHandler(message);
+	}
+
+	return false;
+}
+
+// ** DtoTokenInput::emitUnexpectedToken
+void DtoTokenInput::emitUnexpectedToken() const
+{
+	if (!g_errorHandler)
+	{
+		return;
+	}
+
+	char message[MaxMessageLength];
+	snprintf(message, MaxMessageLength, "error: %d:%d : unexpected token '%s' after '%s'", m_token.line, m_token.line, s_tokens[m_token.type], s_tokens[m_prev.type]);
+	g_errorHandler(message);
+}
+
+// ** DtoTokenInput::consume
+bool DtoTokenInput::consume(TokenType type, bool nextNonSpace)
+{
+	if (currentToken() == type)
+	{
+		if (nextNonSpace)
+		{
+			this->nextNonSpace();
+		}
+		else
+		{
+			next();
+		}
+		return true;
+	}
+
+	return false;
+}
+
+// ** DtoTokenInput::check
+bool DtoTokenInput::check(TokenType type)
+{
+	return currentToken() == type;
+}
+
+// ** DtoTokenInput::consumeNumber
+DtoValue DtoTokenInput::consumeNumber(int sign, bool nextNonSpace)
+{
+	DtoStringView text = m_token.text;
+
+	if (!expect(Number, nextNonSpace))
+	{
+		return DtoValue();
+	}
+
+	char buffer[24];
+	strncpy_s(buffer, text.value, std::min<int32>(sizeof(buffer), text.length));
+
+	DtoValue result;
+	result.type = DtoDouble;
+	result.number = atof(buffer) * sign;
+	return result;
+}
+
+// ** DtoTokenInput::consumeNumber
+DtoValue DtoTokenInput::consumeBoolean(bool nextNonSpace)
+{
+	DtoValue value;
+
+	switch (m_token.type)
+	{
+	case True:
+		consume(True, nextNonSpace);
+		value.type = DtoBool;
+		value.boolean = true;
+		return value;
+
+	case False:
+		consume(False, nextNonSpace);
+		value.type = DtoBool;
+		value.boolean = false;
+		return value;
+
+	default:
+		emitUnexpectedToken();
+	}
+
+	return value;
+}
+
+// ** DtoTokenInput::consumeString
+DtoValue DtoTokenInput::consumeString(bool nextNonSpace)
+{
+	DtoValue result;
+	result.type = DtoString;
+	result.string = m_token.text;
+	consume(m_token.type, nextNonSpace);
+	return result;
+}
+
+// ** DtoTokenInput::nextNonSpace
+const DtoTokenInput::Token& DtoTokenInput::nextNonSpace()
+{
+	do
+	{
+		next();
+	} while (m_token == Space || m_token == Tab || m_token == NewLine);
+
+	return m_token;
+}
+
+// ** DtoTokenInput::next
+const DtoTokenInput::Token& DtoTokenInput::next()
+{
+	// Save the current token as a previous one
+	m_prev = m_token;
+
+	// Read the next token
+	m_token.line        = m_line;
+	m_token.column      = m_column;
+	m_token.text.value  = reinterpret_cast<cstring>(m_ptr);
+	m_token.type        = readToken();
+	m_token.text.length = reinterpret_cast<cstring>(m_ptr) - m_token.text.value;
 
 	// Postprocess token
-	if (token.type == NewLine)
+	if (m_token.type == NewLine)
 	{
 		m_line++;
 		m_column = 1;
 	}
 	else
 	{
-		m_column += token.text.length;
+		m_column += m_token.text.length;
 
-		if (token.type == DoubleQuotedString || token.type == SingleQuotedString)
+		if (m_token == DoubleQuotedString || m_token == SingleQuotedString)
 		{
-			if (token.text.length == 2)
+			if (m_token.text.length == 2)
 			{
-				token.text = DtoStringView::construct("");
+				m_token.text = DtoStringView::construct("");
 			}
 			else
 			{
-				token.text.value++;
-				token.text.length -= 2;
+				m_token.text.value++;
+				m_token.text.length -= 2;
 			}
 		}
 	}
 	
-	return token;
+	return m_token;
 }
 
-// ** DtoTokenInput::consumeToken
-DtoTokenInput::TokenType DtoTokenInput::consumeToken()
+// ** DtoTokenInput::readToken
+DtoTokenInput::TokenType DtoTokenInput::readToken()
 {
 	// First try primitive tokens
 	switch (currentSymbol())
@@ -588,49 +759,49 @@ DtoTokenInput::TokenType DtoTokenInput::consumeToken()
 	case 0:
 		return End;
 	case ' ':
-		return consumeAs(Space);
+		return readAs(Space);
 	case '\n':
-		return consumeAs(NewLine);
+		return readAs(NewLine);
 	case '\t':
-		return consumeAs(Tab);
+		return readAs(Tab);
 	case '\r':
 		if (nextSymbol() == '\n')
 		{
-			return consumeAs(NewLine, 2);
+			return readAs(NewLine, 2);
 		}
 		break;
 	case '-':
-		return consumeAs(Minus);
+		return readAs(Minus);
 	case '[':
-		return consumeAs(BracketOpen);
+		return readAs(BracketOpen);
 	case ']':
-		return consumeAs(BracketClose);
+		return readAs(BracketClose);
 	case '{':
-		return consumeAs(BraceOpen);
+		return readAs(BraceOpen);
 	case '}':
-		return consumeAs(BraceClose);
+		return readAs(BraceClose);
 	case ':':
-		return consumeAs(Colon);
+		return readAs(Colon);
 	case ',':
-		return consumeAs(Comma);
+		return readAs(Comma);
 	case '"':
-		return consumeString('"', DoubleQuotedString);
+		return readString('"', DoubleQuotedString);
 	case '\'':
-		return consumeString('\'', SingleQuotedString);
+		return readString('\'', SingleQuotedString);
 	}
 
 	// Is it a number?
 	if (isdigit(currentSymbol()))
 	{
-		return consumeNumber();
+		return readNumber();
 	}
 
 	// May be a boolean value?
-	if (consume("true"))
+	if (read("true"))
 	{
 		return True;
 	}
-	if (consume("false"))
+	if (read("false"))
 	{
 		return False;
 	}
@@ -649,11 +820,11 @@ DtoTokenInput::TokenType DtoTokenInput::consumeToken()
 		return Identifier;
 	}
 
-	return NonTerminal;
+	return Nonterminal;
 }
 
-// ** DtoTokenInput::consumeNumber
-DtoTokenInput::TokenType DtoTokenInput::consumeNumber()
+// ** DtoTokenInput::readNumber
+DtoTokenInput::TokenType DtoTokenInput::readNumber()
 {
 	// First consume an integer part
 	while (isdigit(currentSymbol()))
@@ -662,7 +833,7 @@ DtoTokenInput::TokenType DtoTokenInput::consumeNumber()
 	}
 
 	// Probably a decimal value
-	if (consume("."))
+	if (read("."))
 	{
 		while (isdigit(currentSymbol()))
 		{
@@ -673,8 +844,8 @@ DtoTokenInput::TokenType DtoTokenInput::consumeNumber()
 	return Number;
 }
 
-// ** DtoTokenInput::consumeString
-DtoTokenInput::TokenType DtoTokenInput::consumeString(char quote, TokenType type)
+// ** DtoTokenInput::readString
+DtoTokenInput::TokenType DtoTokenInput::readString(char quote, TokenType type)
 {
 	assert(currentSymbol() == quote);
 
@@ -711,8 +882,8 @@ char DtoTokenInput::lookAhead(int32 offset) const
 	return *(m_ptr + offset);
 }
 
-// ** DtoTokenInput::consume
-bool DtoTokenInput::consume(cstring symbols)
+// ** DtoTokenInput::read
+bool DtoTokenInput::read(cstring symbols)
 {
 	int32 length = static_cast<int32>(strlen(symbols));
 	int32 av     = available();
@@ -731,8 +902,8 @@ bool DtoTokenInput::consume(cstring symbols)
 	return false;
 }
 
-// ** DtoTokenInput::consumeAs
-DtoTokenInput::TokenType DtoTokenInput::consumeAs(TokenType type, int32 count)
+// ** DtoTokenInput::readAs
+DtoTokenInput::TokenType DtoTokenInput::readAs(TokenType type, int32 count)
 {
 	assert(count >= 0);
 	advance(count);

@@ -246,10 +246,13 @@ DTO_BEGIN
 	{
 	public:
 
+		//! A maximum length of an error message.
+		enum { MaxMessageLength = 30 };
+
 		//! Enumeration of all available tokens.
 		enum TokenType
 		{
-			  NonTerminal			//!< This special token type indicates that an unknown symbol encountered.
+			  Nonterminal			//!< This special token type indicates that an unknown symbol encountered.
 			, End					//!< A zero terminator reached.
 			, NewLine				//!< A new line token is one of '\n' or '\r\n' symbols.
 			, Space					//!< An empty space character.
@@ -270,6 +273,9 @@ DTO_BEGIN
 			, TotalTokens			//!< A total number of tokens.
 		};
 
+		//! Token names.
+		static cstring s_tokens[TotalTokens];
+
 		//! A token data that is returned by text input.
 		struct Token
 		{
@@ -289,18 +295,48 @@ DTO_BEGIN
 								DtoTokenInput(cstring input);
 
 		//! Reads a next token from an input stream.
-		Token					next();
+		const Token&			next();
+
+		//! Reads a next non whitespace token from an input stream.
+		const Token&			nextNonSpace();
+
+		//! Returns a total numner of consumed bytes.
+		int32					consumed() const;
+
+		//! Returns current token.
+		const Token&			currentToken() const;
+
+		//! Consumes a number value from an input stream.
+		DtoValue				consumeNumber(int sign = 1, bool nextNonSpace = false);
+
+		//! Consumes a boolean value from an input stream.
+		DtoValue				consumeBoolean(bool nextNonSpace = false);
+
+		//! Consumes a string value from an input stream.
+		DtoValue				consumeString(bool nextNonSpace = false);
+
+		//! Expects that a current token matches the specified one and if so, reads the next one.
+		bool					expect(TokenType type, bool nextNonSpace = false);
+
+		//! Checks the type of a current token and if it matches the specified one consumes it and returns true.
+		bool					consume(TokenType type, bool nextNonSpace = false);
+
+		//! Checks the type of a current token and if it matches the specified one returns true.
+		bool					check(TokenType type);
+
+		//! Emits an unexpected token error.
+		void					emitUnexpectedToken() const;
 
 	private:
 
-		//! Consumes a token from an input stream and returns it's stream.
-		TokenType				consumeToken();
+		//! Reads a token from an input stream and returns it's type.
+		TokenType				readToken();
 
 		//! Consumes a number token from an input stream.
-		TokenType				consumeNumber();
+		TokenType				readNumber();
 
 		//! Consumes a string token.
-		TokenType				consumeString(char quote, TokenType type);
+		TokenType				readString(char quote, TokenType type);
 
 		//! Returns a current symbol.
 		char					currentSymbol() const;
@@ -312,15 +348,17 @@ DTO_BEGIN
 		char					lookAhead(int32 offset) const;
 
 		//! Returns true if a specified sequence of symbols can be consumed and if so consumes it.
-		bool					consume(cstring symbols);
+		bool					read(cstring symbols);
 
 		//! A shortcut to consume symbol an return a token type.
-		TokenType				consumeAs(TokenType type, int32 count = 1);
+		TokenType				readAs(TokenType type, int32 count = 1);
 
 	private:
 
 		int32					m_line;		//!< A current line number.
 		int32					m_column;	//!< A current column number.
+		Token					m_token;	//!< A current token.
+		Token					m_prev;		//!< A previous token (used by error message formatter).
 	};
 
 DTO_END
