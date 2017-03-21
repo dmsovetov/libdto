@@ -351,6 +351,12 @@ DTO_BEGIN
 		return result;
 	}
 
+	//! A callback function used for error handling.
+	typedef void (*DtoErrorHandler)(cstring message);
+
+	//! Sets an error handler.
+	void dtoSetErrorHandler(DtoErrorHandler value);
+
 DTO_END
 
 #include "ByteBuffer.h"

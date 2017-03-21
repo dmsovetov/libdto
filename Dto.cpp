@@ -30,6 +30,15 @@ SOFTWARE.
 
 DTO_BEGIN
 
+//! A shader DTO error handler.
+DtoErrorHandler g_errorHandler = 0;
+
+// ** dtoSetErrorHandler
+void dtoSetErrorHandler(DtoErrorHandler value)
+{
+	g_errorHandler = value;
+}
+
 // ------------------------------------------------------ Dto ------------------------------------------------------ //
 
 // ** Dto::Dto
