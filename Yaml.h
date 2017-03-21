@@ -67,7 +67,7 @@ DTO_BEGIN
 	};
 
 	//! Parses a Yaml string and produces a sequence of DTO events consumable by writer.
-	class YamlDtoReader : public JsonDtoReader
+	class YamlDtoReader : public DtoReader
 	{
 	public:
 
@@ -77,40 +77,25 @@ DTO_BEGIN
 		//! Parses a next event from an input stream.
 		virtual DtoEvent            next();
 
+		//! Returns a total number of consumed bytes.
+		virtual int32		        consumed() const;
+
 	private:
 
-		//! Reads a next token from an input stream.
-		byte						readToken();
+		//! Parses an input stream.
+		DtoEvent					parseStream();
 
-		//! Reads an identifier token from an input stream.
-		bool						consumeIdentifierToken(DtoStringView& text);
-
-		//! Reads all available whitespace characters and returns an indentation level.
+		//! Reads indentation level.
 		int32						consumeIndentation();
 
-		//! Reads all available whitespace or tab characters.
-		void						consumeWhiteSpaces();
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventRoot(Node& node);
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventKeyValue(Node& node);
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventSequence(Node& node);
-
-		//! Consumes a DtoEntry event from an input stream.
-		DtoEvent					eventEntry(const DtoStringView& key);
-
 	private:
 
-		//! Enumeration of Yaml tokens.
-		enum Token
-		{
-			  TokenEntry = TotalJsonTokens		//!< A sequence entry token.
-			, TokenIdentifier					//!< An identifier token (probably a key or a string value)
-		};
+		//! Event parsing function.
+		typedef DtoEvent (YamlDtoReader::*EventParser)();
+
+		DtoTokenInput				m_input;		//!< An input token stream.
+		std::stack<EventParser>		m_stack;		//!< An event parsing stack.
+		std::stack<int32>			m_indentation;	//!< An indentation stack.
 	};
 
 DTO_END

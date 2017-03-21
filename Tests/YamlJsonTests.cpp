@@ -29,7 +29,7 @@ SOFTWARE.
 static byte document[16536];
 typedef ::Dto::Dto DtoType;
 
-TEST(Yaml, ParsesJsonEmptyObject)
+/*TEST(Yaml, ParsesJsonEmptyObject)
 {
 	cstring yaml = "{}";
 	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
@@ -229,4 +229,4 @@ TEST(Yaml, WontParseJsonRootArray)
 	cstring yaml = "[]";
 	DtoType dto = dtoParse<YamlDtoReader>(yaml, document, sizeof(document));
 	ASSERT_FALSE(dto);
-}
+}*/

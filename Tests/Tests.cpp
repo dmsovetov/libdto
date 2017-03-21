@@ -26,8 +26,14 @@ SOFTWARE.
 
 #include "Tests.h"
 
+void dtoError(cstring message)
+{
+	printf("%s\n", message);
+}
+
 int main(int argc, char *argv[])
 {
+	dtoSetErrorHandler(dtoError);
 	::testing::InitGoogleTest(&argc, argv);
 	int res = RUN_ALL_TESTS();
 	return res;

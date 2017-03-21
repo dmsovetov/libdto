@@ -93,30 +93,6 @@ DTO_BEGIN
 
     protected:
 
-		struct State
-		{
-			DtoEvent (*parser)();
-		};
-
-		//! Contains info about a JSON node being parsed.
-		struct Node
-		{
-			//! A nested node type.
-			enum Type
-			{
-				  Sequence
-				, KeyValue
-			};
-
-			Type					type;		//!< A node value type.
-			int32					children;	//!< A total number of nested items.
-			bool					closed;		//!< Indicates that no child node are expected anymore.
-
-									//! Constructs a Node instance.
-									Node(Type type)
-										: type(type), children(0), closed(false) {}
-		};
-
 		typedef DtoEvent (JsonDtoReader::*EventParser)();
 
 		//! Parses a DtoEntry event from an input stream.
