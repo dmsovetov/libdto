@@ -29,13 +29,11 @@ SOFTWARE.
 static byte document[16536];
 typedef ::Dto::Dto DtoType;
 
-TEST(Json, ParsesEmptyString)
+TEST(Json, WontParseEmptyString)
 {
 	cstring json = "";
 	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
-	ASSERT_TRUE(dto);
-	EXPECT_EQ(dto.length(), 5);
-	EXPECT_EQ(dto.entryCount(), 0);
+	ASSERT_FALSE(dto);
 }
 
 TEST(Json, ParsesEmptyObject)
@@ -108,6 +106,19 @@ TEST(Json, ParsesNegativeIntegersInsideArrays)
 
 	DtoIter i = dto.find("a");
 	ASSERT_TRUE(i);
+	ASSERT_TRUE(i == DtoSequence);
+
+	DtoIter _0 = dto.findDescendant("a.0");
+	ASSERT_TRUE(_0);
+	EXPECT_EQ(_0.toInt32(), -123);
+
+	DtoIter _1 = dto.findDescendant("a.1");
+	ASSERT_TRUE(_1);
+	EXPECT_EQ(_1.toInt32(), -1);
+
+	DtoIter _2 = dto.findDescendant("a.2");
+	ASSERT_TRUE(_2);
+	EXPECT_EQ(_2.toInt32(), -2);
 }
 
 TEST(Json, ParsesDecimals)
@@ -145,6 +156,15 @@ TEST(Json, ParsesNegativeDecimalsInsideArrays)
 
 	DtoIter i = dto.find("a");
 	ASSERT_TRUE(i);
+	ASSERT_TRUE(i == DtoSequence);
+
+	DtoIter _0 = dto.findDescendant("a.0");
+	ASSERT_TRUE(_0);
+	EXPECT_EQ(_0.toDouble(), -12.23);
+
+	DtoIter _1 = dto.findDescendant("a.1");
+	ASSERT_TRUE(_1);
+	EXPECT_EQ(_1.toDouble(), -1.2);
 }
 
 TEST(Json, ParsesStrings)
@@ -165,6 +185,18 @@ TEST(Json, ParsesComplexObjects)
 	cstring json = "{\"a\":12.23,\"b\":1,\"c\":true}";
 	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
 	ASSERT_TRUE(dto);
+
+	DtoIter _a = dto.find("a");
+	ASSERT_TRUE(_a);
+	EXPECT_EQ(_a.toDouble(), 12.23);
+
+	DtoIter _b = dto.find("b");
+	ASSERT_TRUE(_b);
+	EXPECT_EQ(_b.toInt32(), 1);
+
+	DtoIter _c = dto.find("c");
+	ASSERT_TRUE(_c);
+	EXPECT_TRUE(_c.toBool());
 }
 
 TEST(Json, HandlesWhitespaceChars)
@@ -172,6 +204,18 @@ TEST(Json, HandlesWhitespaceChars)
 	cstring json = "{\"a\" :   12.23,\"b\":1,\r\n\n\r\n\"c\": \ttrue}";
 	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
 	ASSERT_TRUE(dto);
+
+	DtoIter _a = dto.find("a");
+	ASSERT_TRUE(_a);
+	EXPECT_EQ(_a.toDouble(), 12.23);
+
+	DtoIter _b = dto.find("b");
+	ASSERT_TRUE(_b);
+	EXPECT_EQ(_b.toInt32(), 1);
+
+	DtoIter _c = dto.find("c");
+	ASSERT_TRUE(_c);
+	EXPECT_TRUE(_c.toBool());
 }
 
 TEST(Json, ParsesNestedEmptyObjects)
@@ -184,6 +228,7 @@ TEST(Json, ParsesNestedEmptyObjects)
 	DtoIter i = dto.find("a");
 	ASSERT_TRUE(i);
 	EXPECT_EQ(i.type(), DtoKeyValue);
+	EXPECT_EQ(i.toDto().entryCount(), 0);
 }
 
 TEST(Json, ParsesNestedEmptyArrays)
@@ -233,9 +278,9 @@ TEST(Json, ParsesNestedComplexArrays)
 	EXPECT_EQ(i.type(), DtoSequence);
 }
 
-TEST(Json, WontParseRootArray)
+TEST(Json, ParsesRootEmptyArray)
 {
 	cstring json = "[]";
 	DtoType dto = dtoParse<JsonDtoReader>(json, document, sizeof(document));
-	ASSERT_FALSE(dto);
+	ASSERT_TRUE(dto);
 }

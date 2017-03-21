@@ -556,7 +556,8 @@ DtoTokenInput::DtoTokenInput(const byte* input, int32 capacity)
 	, m_line(1)
 	, m_column(1)
 {
-
+	memset(&m_prev, 0, sizeof(m_prev));
+	memset(&m_token, 0, sizeof(m_token));
 }
 
 // ** DtoTokenInput::DtoTokenInput
@@ -565,7 +566,8 @@ DtoTokenInput::DtoTokenInput(cstring input)
 	, m_line(1)
 	, m_column(1)
 {
-
+	memset(&m_prev, 0, sizeof(m_prev));
+	memset(&m_token, 0, sizeof(m_token));
 }
 
 // ** DtoTokenInput::consumed
@@ -686,7 +688,7 @@ DtoValue DtoTokenInput::consumeBoolean(bool nextNonSpace)
 		emitUnexpectedToken();
 	}
 
-	return value;
+	return DtoValue();
 }
 
 // ** DtoTokenInput::consumeString

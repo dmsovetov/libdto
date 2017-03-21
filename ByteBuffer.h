@@ -247,7 +247,7 @@ DTO_BEGIN
 	public:
 
 		//! A maximum length of an error message.
-		enum { MaxMessageLength = 30 };
+		enum { MaxMessageLength = 60 };
 
 		//! Enumeration of all available tokens.
 		enum TokenType

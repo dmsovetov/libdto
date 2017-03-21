@@ -93,27 +93,10 @@ DTO_BEGIN
 
     protected:
 
-        //! Enumeration of JSON tokens.
-        enum
-        {
-			  TokenNonTerminal		//!< A non terminal symbol encountered.
-            , TokenEOF              //!< The end of an input stream encountered.
-            , TokenString           //!< A sequence of symbols surrounded by a '"' symbol.
-            , TokenNumber           //!< An integer or a floating point number.
-            , TokenSequenceStart    //!< The start of a sequence.
-            , TokenSequenceEnd      //!< The end of a sequence.
-            , TokenKeyValueStart    //!< The start of a key-value node.
-            , TokenKeyValueEnd      //!< The end of a key-value node.
-            , TokenComma            //!< A comma separator.
-            , TokenColon            //!< A colon symbol.
-			, TokenTrue				//!< A boolean value token.
-			, TokenFalse			//!< A boolean value token.
-			, TokenSpace			//!< A whitespace token.
-			, TokenTab				//!< A tab token.
-			, TokenNewLine			//!< A new line token.
-			, TokenMinus			//!< A minus sign token.
-			, TotalJsonTokens		//!< A total number of JSON tokens.
-        };
+		struct State
+		{
+			DtoEvent (*parser)();
+		};
 
 		//! Contains info about a JSON node being parsed.
 		struct Node
@@ -121,8 +104,7 @@ DTO_BEGIN
 			//! A nested node type.
 			enum Type
 			{
-				  Root
-				, Sequence
+				  Sequence
 				, KeyValue
 			};
 
@@ -135,74 +117,43 @@ DTO_BEGIN
 										: type(type), children(0), closed(false) {}
 		};
 
-		//! A token structure.
-		struct Token
-		{
-			DtoStringView			text;	//!< A token text.
-			byte					type;	//!< A token type.
-			int32					line;	//!< A token line number.
-			int32					column;	//!< A token column number.
-		};
+		typedef DtoEvent (JsonDtoReader::*EventParser)();
 
-		//! Returns a current symbol.
-		char						currentSymbol() const;
+		//! Parses a DtoEntry event from an input stream.
+		DtoEvent					parsePrimitive(const DtoStringView& key);
 
-		//! Returns true if a specified symbol can be consumed, if so consumes it.
-		bool						consumeSymbol(char c);
+		//! Parses a next event from an input stream.
+		DtoEvent					parseKeyValue();
 
-        //! Reads a next token from an input stream and returns it's type.
-        byte						readToken();
+		//! Parses a next event from an input stream.
+		DtoEvent					parseItem();
 
-		//! Reads a next non whitespace token from an input stream and returns it's type.
-		byte						readNonSpaceToken();
+		//! Expects to parse a closing brace at the end of a stream.
+		DtoEvent					expectBraceStreamEnd();
 
-		//! Returns current token type.
-		byte						currentToken() const;
+		//! Expects to parse a closing bracket at the end of a stream.
+		DtoEvent					expectBracketStreamEnd();
 
-		//! Returns current token text.
-		const DtoStringView&		currentText() const;
+		//! Expects to parse a closing brace at the end of a key-value node.
+		DtoEvent					expectKeyValueEnd();
 
-		//! Sets a current token.
-		byte						setToken(byte type, const DtoStringView& text);
+		//! Expects to parse a closing bracket at the end of a sequence node.
+		DtoEvent					expectSequenceEnd();
 
-		//! Reads a string token from an input stream.
-		void						consumeStringToken(DtoStringView& text);
+		//! Continues parsing sequence if comma token encountered.
+		DtoEvent					continueSequence();
 
-		//! Reads a number token from an input stream.
-		void						consumeNumberToken(DtoStringView& text);
+		//! Continues parsing an object if comma token encountered.
+		DtoEvent					continueKeyValue();
 
-		//! Consumes a DtoEntry event from an input stream.
-		DtoEvent					eventEntry(DtoStringView key);
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventRoot(Node& node);
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventKeyValue(Node& node);
-
-		//! Consumes a next event from an input stream.
-		DtoEvent					eventSequence(Node& node);
-
-		//! Returns true if an expected token was read from an input stream.
-		bool						expectToken(byte token);
-
-		//! Returns true if a next token is a specified one, if so consumes it.
-		bool						parseToken(byte token);
-
-		//! Constructs a string value from a token.
-		DtoValue					stringFromToken(const DtoStringView& value);
-
-		//! Constructs a number value from a token.
-		DtoValue					numberFromToken(const DtoStringView& value, int sign = 1);
-
-		//! Returns a topmost JSON node.
-		Node&						topmost();
+		//! A root event parser.
+		DtoEvent					parseStream();
 
     protected:
 
-        DtoByteBufferInput          m_input;    //!< An input byte buffer.
-		std::stack<Node>			m_stack;	//!< A node stack.
-		Token						m_token;	//!< A current token.
+        DtoTokenInput				m_input;    //!< An input token stream.
+		std::stack<EventParser>		m_stack;	//!< A event parser stack.
+		std::stack<int>				m_index;	//!< A sequence item index stack.
 		char						m_text[64];	//!< An internal temporary string buffer.
     };
 
